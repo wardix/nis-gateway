@@ -19,6 +19,9 @@ export interface FttxCircuitResult {
 export class SubscriberRepository {
   async findByPhone(phone: string): Promise<SubscriberLookupResult[]> {
     try {
+      // Escape special LIKE wildcard characters (% and _) to prevent injection
+      const escapedPhone = phone.replace(/[%_]/g, '\\$&')
+
       const results = await sql`
         SELECT
           cs.CustServId AS subscriber_id,
@@ -29,7 +32,7 @@ export class SubscriberRepository {
           CustomerServices cs
         ON sp.CustId = cs.CustId
         WHERE
-          CONCAT('+', sp.phone) LIKE CONCAT('%+', ${phone})
+          CONCAT('+', sp.phone) LIKE CONCAT('%+', ${escapedPhone})
           AND NOT (cs.CustStatus IN ('NA'))
       `
       return results as unknown as SubscriberLookupResult[]

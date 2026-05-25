@@ -57,7 +57,10 @@ const phoneLookupRoute = createRoute({
   security: [{ JWTAuth: [] }],
   request: {
     query: z.object({
-      phone: z.string().openapi({ example: '62812345678' }),
+      phone: z
+        .string()
+        .regex(/^\+?[0-9]+$/, { message: 'Invalid phone number format' })
+        .openapi({ example: '62812345678' }),
     }),
   },
   responses: {
@@ -68,6 +71,9 @@ const phoneLookupRoute = createRoute({
         },
       },
       description: 'Subscriber ditemukan',
+    },
+    400: {
+      description: 'Bad Request - Parameter format salah',
     },
     401: {
       description: 'Unauthorized',
