@@ -18,7 +18,7 @@ export class SubscriberService {
     return await this.subscriberRepository.syncGraphs(data, updatedBy)
   }
 
-  async getFttxCircuits(page: number, pageSize: number, operatorId?: string) {
+  async getFttxCircuits(page: number, pageSize: number, operatorId: string) {
     return await this.subscriberRepository.getFttxCircuitsPaginated(
       page,
       pageSize,
