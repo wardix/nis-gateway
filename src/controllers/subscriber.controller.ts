@@ -51,7 +51,7 @@ const fttxPaginatedResponseSchema = z
 // Routes
 const phoneLookupRoute = createRoute({
   method: 'get',
-  path: '/lookup-by-phone',
+  path: '/search',
   summary: 'Lookup Subscriber by Phone',
   description: 'Mencari subscriber berdasarkan nomor telepon.',
   security: [{ JWTAuth: [] }],

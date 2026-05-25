@@ -42,9 +42,9 @@ NIS Gateway adalah layanan mandiri yang berinteraksi langsung dengan database My
 
 ### Fase 2: Pengembangan Layanan (Service Development)
 - [x] Implementasi endpoint `POST /auth/token` untuk menghasilkan JWT.
-- [x] Implementasi endpoint `POST /bandwidth/lookup` untuk melihat informasi bandwidth.
-- [x] Implementasi endpoint `GET /customer/lookup-id` untuk mencari Customer ID.
-- [x] Implementasi endpoint `GET /subscriber/lookup-by-phone`, `POST /subscriber/sync-graphs`, dan `GET /subscriber/fttx-circuits`.
+- [x] Implementasi endpoint `POST /bandwidth/search` untuk melihat informasi bandwidth.
+- [x] Implementasi endpoint `GET /customer/search` untuk mencari Customer ID.
+- [x] Implementasi endpoint `GET /subscriber/search`, `POST /subscriber/sync-graphs`, dan `GET /subscriber/fttx-circuits`.
 - [x] Integrasi OpenAPI (Swagger UI) untuk dokumentasi otomatis.
 - [x] Implementasi *Repository layer* untuk eksekusi Raw SQL.
 - [x] Implementasi *Service layer* untuk logika bisnis inti.
