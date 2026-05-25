@@ -17,9 +17,16 @@ const bandwidthInfoSchema = z
   })
   .openapi('BandwidthInfo')
 
+const ipSchema =
+  typeof z.string().ip === 'function'
+    ? z.string().ip()
+    : z.string().regex(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/, {
+        message: 'Invalid IP address',
+      })
+
 const lookupRequestSchema = z
   .object({
-    ips: z.array(z.string().ip()).openapi({ example: ['10.20.30.41'] }),
+    ips: z.array(ipSchema).openapi({ example: ['10.20.30.41'] }),
   })
   .openapi('LookupRequest')
 
