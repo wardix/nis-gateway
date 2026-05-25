@@ -1,0 +1,169 @@
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
+import { SubscriberRepository } from '../repositories/subscriber.repository'
+import { SubscriberService } from '../services/subscriber.service'
+
+export const subscriberController = new OpenAPIHono()
+
+const subscriberRepository = new SubscriberRepository()
+const subscriberService = new SubscriberService(subscriberRepository)
+
+// Schemas
+const subscriberLookupResultSchema = z
+  .object({
+    subscriber_id: z.string().openapi({ example: 'S001' }),
+    subscriber_name: z.string().openapi({ example: 'John Doe' }),
+  })
+  .openapi('SubscriberLookupResult')
+
+const syncGraphsRequestSchema = z
+  .object({
+    data: z.array(
+      z.object({
+        subscriber_id: z.string().openapi({ example: 'S001' }),
+        graph_id: z.string().openapi({ example: 'G100' }),
+      }),
+    ),
+    updated_by: z.string().default('system').openapi({ example: 'admin_nis' }),
+  })
+  .openapi('SyncGraphsRequest')
+
+const fttxCircuitResultSchema = z
+  .object({
+    subscriber_id: z.string().openapi({ example: 'S001' }),
+    subscriber_name: z.string().openapi({ example: 'John Doe' }),
+    circuit_id: z.string().openapi({ example: 'V-CID-123' }),
+  })
+  .openapi('FttxCircuitResult')
+
+const fttxPaginatedResponseSchema = z
+  .object({
+    results: z.array(fttxCircuitResultSchema),
+    total: z.number().openapi({ example: 100 }),
+  })
+  .openapi('FttxPaginatedResponse')
+
+// Routes
+const phoneLookupRoute = createRoute({
+  method: 'get',
+  path: '/lookup-by-phone',
+  summary: 'Lookup Subscriber by Phone',
+  description: 'Mencari subscriber berdasarkan nomor telepon.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z.object({
+      phone: z.string().openapi({ example: '62812345678' }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.array(subscriberLookupResultSchema),
+        },
+      },
+      description: 'Subscriber ditemukan',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+  },
+})
+
+const syncGraphsRoute = createRoute({
+  method: 'post',
+  path: '/sync-graphs',
+  summary: 'Sync Subscriber Graph Data',
+  description: 'Sinkronisasi batch data grafik Zabbix ke database legacy.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: syncGraphsRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            success: z.boolean().openapi({ example: true }),
+            count: z.number().nullable().openapi({ example: 5 }),
+          }),
+        },
+      },
+      description: 'Sinkronisasi berhasil',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+  },
+})
+
+const fttxCircuitsRoute = createRoute({
+  method: 'get',
+  path: '/fttx-circuits',
+  summary: 'Get FTTX Circuits Data',
+  description: 'Mengambil data sirkuit FTTX dengan paginasi.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z.object({
+      page: z.string().optional().default('1').openapi({ example: '1' }),
+      page_size: z.string().optional().default('10').openapi({ example: '10' }),
+      operator_id: z.string().optional().openapi({ example: 'V001' }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: fttxPaginatedResponseSchema,
+        },
+      },
+      description: 'Data sirkuit berhasil diambil',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+  },
+})
+
+// Implementation
+subscriberController.openapi(phoneLookupRoute, async (c) => {
+  const { phone } = c.req.valid('query')
+  try {
+    const data = await subscriberService.searchByPhone(phone)
+    return c.json(data)
+  } catch (error) {
+    console.error('Subscriber phone lookup error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+subscriberController.openapi(syncGraphsRoute, async (c) => {
+  try {
+    const { data, updated_by } = c.req.valid('json')
+    const count = await subscriberService.syncGraphs(data, updated_by)
+    return c.json({ success: true, count })
+  } catch (error) {
+    console.error('Subscriber graph sync error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+subscriberController.openapi(fttxCircuitsRoute, async (c) => {
+  const { page, page_size, operator_id } = c.req.valid('query')
+  try {
+    const data = await subscriberService.getFttxCircuits(
+      parseInt(page, 10),
+      parseInt(page_size, 10),
+      operator_id,
+    )
+    return c.json(data)
+  } catch (error) {
+    console.error('FTTX circuits retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
