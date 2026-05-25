@@ -116,8 +116,12 @@ const fttxCircuitsRoute = createRoute({
   security: [{ JWTAuth: [] }],
   request: {
     query: z.object({
-      page: z.string().optional().default('1').openapi({ example: '1' }),
-      page_size: z.string().optional().default('10').openapi({ example: '10' }),
+      page: z.coerce.number().optional().default(1).openapi({ example: 1 }),
+      page_size: z.coerce
+        .number()
+        .optional()
+        .default(10)
+        .openapi({ example: 10 }),
       operator_id: z.string().optional().openapi({ example: 'V001' }),
     }),
   },
@@ -163,8 +167,8 @@ subscriberController.openapi(fttxCircuitsRoute, async (c) => {
   const { page, page_size, operator_id } = c.req.valid('query')
   try {
     const data = await subscriberService.getFttxCircuits(
-      parseInt(page, 10),
-      parseInt(page_size, 10),
+      page,
+      page_size,
       operator_id,
     )
     return c.json(data)
