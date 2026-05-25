@@ -52,25 +52,22 @@ const tokenRoute = createRoute({
   },
 })
 
-authController.openapi(
-  tokenRoute,
-  async (c) => {
-    const body = c.req.valid('json')
-
-    const payload: { role: string; user: string; exp?: number } = {
-      role: body.role,
-      user: body.user,
-    }
-
-    if (body.exp) {
-      payload.exp = body.exp
-    }
-
-    const token = await sign(payload, env.JWT_SECRET)
-
-    return c.json({ token })
-  },
-)
-
 // We still need the runtime middleware for static auth
 authController.use('/token', bearerAuth({ token: env.STATIC_AUTH_TOKEN }))
+
+authController.openapi(tokenRoute, async (c) => {
+  const body = c.req.valid('json')
+
+  const payload: { role: string; user: string; exp?: number } = {
+    role: body.role,
+    user: body.user,
+  }
+
+  if (body.exp) {
+    payload.exp = body.exp
+  }
+
+  const token = await sign(payload, env.JWT_SECRET)
+
+  return c.json({ token })
+})
