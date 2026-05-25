@@ -17,7 +17,7 @@ const customerLookupResponseSchema = z
 
 const lookupRoute = createRoute({
   method: 'get',
-  path: '/lookup-id',
+  path: '/search',
   summary: 'Lookup Customer IDs by Email',
   description: 'Mencari daftar Customer ID berdasarkan alamat email.',
   security: [{ JWTAuth: [] }],

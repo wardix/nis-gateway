@@ -31,7 +31,7 @@ const bandwidthLookupResponseSchema = z
 
 const lookupRoute = createRoute({
   method: 'post',
-  path: '/lookup',
+  path: '/search',
   summary: 'Lookup Bandwidth by IPs',
   description: 'Mencari informasi bandwidth untuk daftar IP address.',
   security: [{ JWTAuth: [] }],
