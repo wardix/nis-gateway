@@ -28,9 +28,9 @@ app.openAPIRegistry.registerComponent('securitySchemes', 'JWTAuth', {
 })
 
 // JWT Middleware for business routes
-app.use('/bandwidth/*', jwt({ secret: env.JWT_SECRET }))
-app.use('/customer/*', jwt({ secret: env.JWT_SECRET }))
-app.use('/subscriber/*', jwt({ secret: env.JWT_SECRET }))
+app.use('/bandwidth/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
+app.use('/customer/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
+app.use('/subscriber/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
 
 // Error handling
 app.onError((err, c) => {
