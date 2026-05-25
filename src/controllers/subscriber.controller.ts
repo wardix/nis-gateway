@@ -15,6 +15,12 @@ const subscriberLookupResultSchema = z
   })
   .openapi('SubscriberLookupResult')
 
+const subscriberLookupResponseSchema = z
+  .object({
+    results: z.array(subscriberLookupResultSchema),
+  })
+  .openapi('SubscriberLookupResponse')
+
 const syncGraphsRequestSchema = z
   .object({
     data: z.array(
@@ -58,7 +64,7 @@ const phoneLookupRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: z.array(subscriberLookupResultSchema),
+          schema: subscriberLookupResponseSchema,
         },
       },
       description: 'Subscriber ditemukan',
@@ -135,7 +141,7 @@ subscriberController.openapi(phoneLookupRoute, async (c) => {
   const { phone } = c.req.valid('query')
   try {
     const data = await subscriberService.searchByPhone(phone)
-    return c.json(data)
+    return c.json({ results: data })
   } catch (error) {
     console.error('Subscriber phone lookup error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)

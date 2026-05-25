@@ -23,6 +23,12 @@ const lookupRequestSchema = z
   })
   .openapi('LookupRequest')
 
+const bandwidthLookupResponseSchema = z
+  .object({
+    results: z.array(bandwidthInfoSchema),
+  })
+  .openapi('BandwidthLookupResponse')
+
 const lookupRoute = createRoute({
   method: 'post',
   path: '/lookup',
@@ -42,7 +48,7 @@ const lookupRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: z.array(bandwidthInfoSchema),
+          schema: bandwidthLookupResponseSchema,
         },
       },
       description: 'Data bandwidth ditemukan',
@@ -57,7 +63,7 @@ bandwidthController.openapi(lookupRoute, async (c) => {
   try {
     const { ips } = c.req.valid('json')
     const data = await bandwidthService.lookupBandwidth(ips)
-    return c.json(data)
+    return c.json({ results: data })
   } catch (error) {
     console.error('Bandwidth lookup error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
