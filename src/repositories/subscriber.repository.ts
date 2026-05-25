@@ -73,7 +73,7 @@ export class SubscriberRepository {
   async getFttxCircuitsPaginated(
     page: number,
     pageSize: number,
-    operatorId?: string,
+    operatorId: string,
   ) {
     const offset = (page - 1) * pageSize
 
@@ -87,21 +87,20 @@ export class SubscriberRepository {
             cstc.value AS circuit_id`
 
       return sql`
-        ${selectClause}
-        FROM CustomerServiceTechnicalCustom cstc
-        LEFT JOIN CustomerServiceTechnicalLink cstl ON cstl.id = cstc.technicalTypeId
-        LEFT JOIN CustomerServices cs ON cs.CustServId = cstl.CustServId
-        LEFT JOIN Customer c ON c.CustId = cs.CustId
-        LEFT JOIN noc_fiber nf ON nf.id = cstl.foVendorId
-        LEFT JOIN fiber_vendor fv ON nf.vendorId = fv.id
-        WHERE
-            cstc.technicalType = 'link'
-            AND cstc.attribute = 'Vendor CID'
-            AND cstl.CustServId IS NOT NULL
-            AND cs.CustStatus NOT IN ('NA')
-            ${operatorId ? sql`AND fv.id = ${operatorId}` : sql``}
-            AND cstc.value <> ''
-      `
+      ${selectClause}
+      FROM CustomerServiceTechnicalCustom cstc
+      LEFT JOIN CustomerServiceTechnicalLink cstl ON cstl.id = cstc.technicalTypeId
+      LEFT JOIN CustomerServices cs ON cs.CustServId = cstl.CustServId
+      LEFT JOIN noc_fiber nf ON nf.id = cstl.foVendorId
+      LEFT JOIN fiber_vendor fv ON nf.vendorId = fv.id
+      WHERE
+          cstc.technicalType = 'link'
+          AND cstc.attribute = 'Vendor CID'
+          AND cstl.CustServId IS NOT NULL
+          AND cs.CustStatus NOT IN ('NA')
+          AND fv.id = ${operatorId}
+          AND cstc.value <> ''
+    `
     }
 
     try {

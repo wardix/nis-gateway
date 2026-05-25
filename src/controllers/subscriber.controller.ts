@@ -128,7 +128,10 @@ const fttxCircuitsRoute = createRoute({
         .optional()
         .default(10)
         .openapi({ example: 10 }),
-      operator_id: z.string().optional().openapi({ example: 'V001' }),
+      operator_id: z
+        .string()
+        .min(1, { message: 'Operator ID is required' })
+        .openapi({ example: 'V001' }),
     }),
   },
   responses: {
@@ -139,6 +142,9 @@ const fttxCircuitsRoute = createRoute({
         },
       },
       description: 'Data sirkuit berhasil diambil',
+    },
+    400: {
+      description: 'Bad Request - Parameter format salah',
     },
     401: {
       description: 'Unauthorized',
