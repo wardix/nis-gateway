@@ -57,7 +57,7 @@ app.doc('/doc', {
   },
 })
 
-app.get('/ui', swaggerUI({ url: '/doc' }))
+app.get('/ui', swaggerUI({ url: './doc' }))
 
 console.log(`🚀 NIS Gateway is running on port ${env.PORT}`)
 console.log(`📖 Documentation available at http://localhost:${env.PORT}/ui`)
