@@ -55,6 +55,16 @@ app.doc('/doc', {
     title: 'NIS Gateway API',
     description: 'API modern sebagai jembatan sistem legacy PHP.',
   },
+  servers: [
+    {
+      url: '/api',
+      description: 'Nginx Proxy Server (Production/Staging)',
+    },
+    {
+      url: '/',
+      description: 'Local Direct Server (Direct Access/Development)',
+    },
+  ],
 })
 
 app.get('/ui', swaggerUI({ url: './doc' }))
