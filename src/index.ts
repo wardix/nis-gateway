@@ -57,7 +57,7 @@ app.doc('/doc', {
   },
   servers: [
     {
-      url: '/api',
+      url: env.API_PREFIX,
       description: 'Nginx Proxy Server (Production/Staging)',
     },
     {
