@@ -7,6 +7,7 @@ const envSchema = z.object({
   DB_URL: z.string().url().default('mysql://user:pass@localhost:3306/db'),
   VALKEY_URI: z.string().default('redis://localhost:6379'),
   NATS_URI: z.string().default('nats://localhost:4222'),
+  API_PREFIX: z.string().default('/api'),
 })
 
 const parsedEnv = envSchema.safeParse(process.env)
