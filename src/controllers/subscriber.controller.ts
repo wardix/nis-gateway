@@ -48,6 +48,22 @@ const fttxPaginatedResponseSchema = z
   })
   .openapi('FttxPaginatedResponse')
 
+const fttxHomepassResultSchema = z
+  .object({
+    subscriber_id: z.string().openapi({ example: 'S001' }),
+    subscriber_name: z.string().openapi({ example: 'John Doe' }),
+    circuit_id: z.string().nullable().openapi({ example: 'V-CID-123' }),
+    homepass_id: z.string().nullable().openapi({ example: 'HP-456' }),
+  })
+  .openapi('FttxHomepassResult')
+
+const fttxHomepassPaginatedResponseSchema = z
+  .object({
+    results: z.array(fttxHomepassResultSchema),
+    total: z.number().openapi({ example: 100 }),
+  })
+  .openapi('FttxHomepassPaginatedResponse')
+
 // Routes
 const phoneLookupRoute = createRoute({
   method: 'get',
@@ -152,6 +168,45 @@ const fttxCircuitsRoute = createRoute({
   },
 })
 
+const fttxHomepassesRoute = createRoute({
+  method: 'get',
+  path: '/fttx-homepasses',
+  summary: 'Get FTTX Homepasses Data',
+  description:
+    'Mengambil data homepass FTTX (subscriber, circuit ID, homepass ID) berdasarkan operator, dengan paginasi.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z.object({
+      page: z.coerce.number().optional().default(1).openapi({ example: 1 }),
+      page_size: z.coerce
+        .number()
+        .optional()
+        .default(10)
+        .openapi({ example: 10 }),
+      operator_id: z
+        .string()
+        .min(1, { message: 'Operator ID is required' })
+        .openapi({ example: '22' }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: fttxHomepassPaginatedResponseSchema,
+        },
+      },
+      description: 'Data homepass berhasil diambil',
+    },
+    400: {
+      description: 'Bad Request - Parameter format salah',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+  },
+})
+
 // Implementation
 subscriberController.openapi(phoneLookupRoute, async (c) => {
   const { phone } = c.req.valid('query')
@@ -186,6 +241,21 @@ subscriberController.openapi(fttxCircuitsRoute, async (c) => {
     return c.json(data)
   } catch (error) {
     console.error('FTTX circuits retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+subscriberController.openapi(fttxHomepassesRoute, async (c) => {
+  const { page, page_size, operator_id } = c.req.valid('query')
+  try {
+    const data = await subscriberService.getFttxHomepasses(
+      page,
+      page_size,
+      operator_id,
+    )
+    return c.json(data)
+  } catch (error) {
+    console.error('FTTX homepasses retrieval error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })
