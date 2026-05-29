@@ -16,6 +16,13 @@ export interface FttxCircuitResult {
   circuit_id: string
 }
 
+export interface FttxHomepassResult {
+  subscriber_id: string
+  subscriber_name: string
+  circuit_id: string | null
+  homepass_id: string | null
+}
+
 export class SubscriberRepository {
   async findByPhone(phone: string): Promise<SubscriberLookupResult[]> {
     try {
@@ -115,6 +122,58 @@ export class SubscriberRepository {
       }
     } catch (error) {
       console.error('Database error in getFttxCircuitsPaginated:', error)
+      throw error
+    }
+  }
+
+  async getHomepassesPaginated(
+    page: number,
+    pageSize: number,
+    operatorId: string,
+  ) {
+    const offset = (page - 1) * pageSize
+
+    const baseQuery = (isCount: boolean) => {
+      const selectClause = isCount
+        ? sql`SELECT COUNT(*) as total`
+        : sql`SELECT
+            cs.CustServId AS subscriber_id,
+            cs.CustAccName AS subscriber_name,
+            cstc1.value AS circuit_id,
+            cstc2.value AS homepass_id`
+
+      return sql`
+      ${selectClause}
+      FROM CustomerServiceTechnicalLink cstl
+      LEFT JOIN CustomerServices cs ON cs.CustServId = cstl.custServId
+      LEFT JOIN noc_fiber nf ON nf.id = cstl.foVendorId
+      LEFT JOIN fiber_vendor fv ON fv.id = nf.vendorId
+      LEFT JOIN CustomerServiceTechnicalCustom cstc1
+        ON  cstc1.technicalType = 'link'
+        AND cstc1.technicalTypeId = cstl.id
+        AND cstc1.attribute = 'Vendor CID'
+      LEFT JOIN CustomerServiceTechnicalCustom cstc2
+        ON  cstc2.technicalType = 'link'
+        AND cstc2.technicalTypeId = cstl.id
+        AND cstc2.attribute = 'Home Id'
+      WHERE
+        fv.id = ${operatorId}
+        AND cs.CustStatus IN ('AC', 'FR')
+      `
+    }
+
+    try {
+      const [results, totalCount] = await Promise.all([
+        sql`${baseQuery(false)} LIMIT ${pageSize} OFFSET ${offset}`,
+        sql`${baseQuery(true)}`,
+      ])
+
+      return {
+        results: results as unknown as FttxHomepassResult[],
+        total: (totalCount[0] as { total: number }).total,
+      }
+    } catch (error) {
+      console.error('Database error in getHomepassesPaginated:', error)
       throw error
     }
   }

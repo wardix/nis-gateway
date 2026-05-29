@@ -25,4 +25,12 @@ export class SubscriberService {
       operatorId,
     )
   }
+
+  async getFttxHomepasses(page: number, pageSize: number, operatorId: string) {
+    return await this.subscriberRepository.getHomepassesPaginated(
+      page,
+      pageSize,
+      operatorId,
+    )
+  }
 }
