@@ -1,5 +1,6 @@
 import { swaggerUI } from '@hono/swagger-ui'
 import { OpenAPIHono } from '@hono/zod-openapi'
+import { HTTPException } from 'hono/http-exception'
 import { jwt } from 'hono/jwt'
 import { logger } from 'hono/logger'
 import { env } from './config/env'
@@ -34,6 +35,9 @@ app.use('/subscriber/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
 
 // Error handling
 app.onError((err, c) => {
+  if (err instanceof HTTPException) {
+    return c.json({ error: err.message }, err.status)
+  }
   console.error(`[Error] ${err.message}`)
   return c.json({ error: 'Internal Server Error' }, 500)
 })
