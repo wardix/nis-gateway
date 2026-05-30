@@ -23,6 +23,11 @@ export interface FttxHomepassResult {
   homepass_id: string | null
 }
 
+export interface SubscriberNetworkResult {
+  subscriber_id: string
+  network: string
+}
+
 export class SubscriberRepository {
   async findByPhone(phone: string): Promise<SubscriberLookupResult[]> {
     try {
@@ -174,6 +179,39 @@ export class SubscriberRepository {
       }
     } catch (error) {
       console.error('Database error in getHomepassesPaginated:', error)
+      throw error
+    }
+  }
+
+  async findNetworksBySubscriberIds(
+    subscriberIds: string[],
+  ): Promise<SubscriberNetworkResult[]> {
+    if (subscriberIds.length === 0) return []
+
+    const BATCH_SIZE = 500
+    const batches: string[][] = []
+    for (let i = 0; i < subscriberIds.length; i += BATCH_SIZE) {
+      batches.push(subscriberIds.slice(i, i + BATCH_SIZE))
+    }
+
+    try {
+      const queryResults = await Promise.all(
+        batches.map(
+          (batch) => sql`
+            SELECT
+              CustServId AS subscriber_id,
+              Network AS network
+            FROM
+              CustomerServiceTechnical
+            WHERE
+              CustServId IN ${batch}
+          `,
+        ),
+      )
+
+      return queryResults.flat() as unknown as SubscriberNetworkResult[]
+    } catch (error) {
+      console.error('Database error in findNetworksBySubscriberIds:', error)
       throw error
     }
   }
