@@ -64,6 +64,27 @@ const fttxHomepassPaginatedResponseSchema = z
   })
   .openapi('FttxHomepassPaginatedResponse')
 
+const subscriberNetworksRequestSchema = z
+  .object({
+    subscriber_ids: z
+      .array(z.string())
+      .openapi({ example: ['74100', '65862'] }),
+  })
+  .openapi('SubscriberNetworksRequest')
+
+const subscriberNetworkResultSchema = z
+  .object({
+    subscriber_id: z.string().openapi({ example: '74100' }),
+    network: z.string().openapi({ example: '10.169.7.192/29' }),
+  })
+  .openapi('SubscriberNetworkResult')
+
+const subscriberNetworksResponseSchema = z
+  .object({
+    results: z.array(subscriberNetworkResultSchema),
+  })
+  .openapi('SubscriberNetworksResponse')
+
 // Routes
 const phoneLookupRoute = createRoute({
   method: 'get',
@@ -207,6 +228,40 @@ const fttxHomepassesRoute = createRoute({
   },
 })
 
+const subscriberNetworksRoute = createRoute({
+  method: 'post',
+  path: '/networks/search',
+  summary: 'Lookup Subscriber Networks',
+  description:
+    'Mencari data network (IP/subnet) untuk daftar subscriber ID secara batch.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: subscriberNetworksRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: subscriberNetworksResponseSchema,
+        },
+      },
+      description: 'Data network subscriber berhasil ditemukan',
+    },
+    400: {
+      description: 'Bad Request - Parameter format salah',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+  },
+})
+
 // Implementation
 subscriberController.openapi(phoneLookupRoute, async (c) => {
   const { phone } = c.req.valid('query')
@@ -256,6 +311,17 @@ subscriberController.openapi(fttxHomepassesRoute, async (c) => {
     return c.json(data)
   } catch (error) {
     console.error('FTTX homepasses retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+subscriberController.openapi(subscriberNetworksRoute, async (c) => {
+  try {
+    const { subscriber_ids } = c.req.valid('json')
+    const data = await subscriberService.getSubscriberNetworks(subscriber_ids)
+    return c.json({ results: data })
+  } catch (error) {
+    console.error('Subscriber networks retrieval error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })

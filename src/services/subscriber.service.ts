@@ -1,5 +1,6 @@
 import type {
   SubscriberLookupResult,
+  SubscriberNetworkResult,
   SubscriberRepository,
   SyncGraphItem,
 } from '../repositories/subscriber.repository'
@@ -31,6 +32,14 @@ export class SubscriberService {
       page,
       pageSize,
       operatorId,
+    )
+  }
+
+  async getSubscriberNetworks(
+    subscriberIds: string[],
+  ): Promise<SubscriberNetworkResult[]> {
+    return await this.subscriberRepository.findNetworksBySubscriberIds(
+      subscriberIds,
     )
   }
 }
