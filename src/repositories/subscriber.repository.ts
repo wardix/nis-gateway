@@ -196,17 +196,23 @@ export class SubscriberRepository {
 
     try {
       const queryResults = await Promise.all(
-        batches.map(
-          (batch) => sql`
+        batches.map((batch) => {
+          const strings = [
+            `
             SELECT
               CustServId AS subscriber_id,
               Network AS network
             FROM
               CustomerServiceTechnical
             WHERE
-              CustServId IN ${batch}
-          `,
-        ),
+              CustServId IN (`,
+            ...Array(batch.length - 1).fill(', '),
+            ')',
+          ] as unknown as TemplateStringsArray
+          strings.raw = strings
+
+          return sql(strings, ...batch)
+        }),
       )
 
       return queryResults.flat() as unknown as SubscriberNetworkResult[]
