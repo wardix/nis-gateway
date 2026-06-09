@@ -8,6 +8,7 @@ import { authController } from './controllers/auth.controller'
 import { bandwidthController } from './controllers/bandwidth.controller'
 import { customerController } from './controllers/customer.controller'
 import { subscriberController } from './controllers/subscriber.controller'
+import { ticketController } from './controllers/ticket.controller'
 
 const app = new OpenAPIHono()
 
@@ -32,6 +33,7 @@ app.openAPIRegistry.registerComponent('securitySchemes', 'JWTAuth', {
 app.use('/bandwidth/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
 app.use('/customer/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
 app.use('/subscriber/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
+app.use('/ticket/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
 
 // Error handling
 app.onError((err, c) => {
@@ -47,6 +49,7 @@ app.route('/auth', authController)
 app.route('/bandwidth', bandwidthController)
 app.route('/customer', customerController)
 app.route('/subscriber', subscriberController)
+app.route('/ticket', ticketController)
 
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok' }))
