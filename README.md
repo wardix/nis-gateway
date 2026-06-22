@@ -33,6 +33,10 @@ Proyek ini menggunakan **Layered Architecture**:
    - Lookup subscriber berdasarkan nomor telepon.
    - Sinkronisasi batch data grafik (Zabbix).
    - Data sirkuit FTTX dengan paginasi.
+   - Data homepass FTTX dengan paginasi.
+   - Lookup network/subnet berdasarkan daftar subscriber ID (mendukung batching).
+5. **Ticket:**
+   - Daftar tiket gangguan aktif dari vendor fiber Iforte.
 
 ## Persiapan & Instalasi
 
