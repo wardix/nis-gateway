@@ -54,6 +54,7 @@ const fttxHomepassResultSchema = z
     subscriber_name: z.string().openapi({ example: 'John Doe' }),
     circuit_id: z.string().nullable().openapi({ example: 'V-CID-123' }),
     homepass_id: z.string().nullable().openapi({ example: 'HP-456' }),
+    subscription_status: z.string().openapi({ example: 'AC' }),
   })
   .openapi('FttxHomepassResult')
 
