@@ -71,7 +71,7 @@ export class BandwidthRepository {
 
           const stringsArray = strings as unknown as TemplateStringsArray
           stringsArray.raw = stringsArray
-          console.log("SQL QUERY:", stringsArray.join('?'))
+          console.log('SQL QUERY:', stringsArray.join('?'))
 
           return sql(stringsArray, ...values)
         }),
