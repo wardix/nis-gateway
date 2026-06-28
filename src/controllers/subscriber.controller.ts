@@ -65,6 +65,21 @@ const fttxHomepassPaginatedResponseSchema = z
   })
   .openapi('FttxHomepassPaginatedResponse')
 
+const fttxTargetResultSchema = z
+  .object({
+    subscriber_id: z.string().openapi({ example: '74100' }),
+    subscriber_name: z.string().openapi({ example: 'PT Example' }),
+    ip_address: z.string().nullable().openapi({ example: '10.169.7.192' }),
+    circuit_id: z.string().nullable().openapi({ example: 'V-CID-123' }),
+  })
+  .openapi('FttxTargetResult')
+
+const fttxTargetResponseSchema = z
+  .object({
+    results: z.array(fttxTargetResultSchema),
+  })
+  .openapi('FttxTargetResponse')
+
 const subscriberNetworksRequestSchema = z
   .object({
     subscriber_ids: z
@@ -229,6 +244,40 @@ const fttxHomepassesRoute = createRoute({
   },
 })
 
+const fttxTargetsRoute = createRoute({
+  method: 'get',
+  path: '/fttx-targets',
+  summary: 'Get FTTX Targets Data',
+  description:
+    'Mengambil data target FTTx (subscriber, IP address, circuit_id) berdasarkan operator.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z.object({
+      operator_id: z
+        .string()
+        .min(1, { message: 'Operator ID is required' })
+        .openapi({ example: '22' }),
+      branch: z.string().optional().openapi({ example: '020,027,028,029' }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: fttxTargetResponseSchema,
+        },
+      },
+      description: 'Data FTTx targets berhasil diambil',
+    },
+    400: {
+      description: 'Bad Request - Parameter format salah',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+  },
+})
+
 const subscriberNetworksRoute = createRoute({
   method: 'post',
   path: '/networks/search',
@@ -323,6 +372,22 @@ subscriberController.openapi(subscriberNetworksRoute, async (c) => {
     return c.json({ results: data })
   } catch (error) {
     console.error('Subscriber networks retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+subscriberController.openapi(fttxTargetsRoute, async (c) => {
+  const { operator_id, branch } = c.req.valid('query')
+  const defaultBranches = ['020', '027', '028', '029']
+  const branches = branch
+    ? branch.split(',').map((b) => b.trim())
+    : defaultBranches
+
+  try {
+    const data = await subscriberService.getFttxTargets(operator_id, branches)
+    return c.json({ results: data })
+  } catch (error) {
+    console.error('FTTX targets retrieval error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })

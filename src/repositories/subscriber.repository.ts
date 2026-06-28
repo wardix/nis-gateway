@@ -29,6 +29,13 @@ export interface SubscriberNetworkResult {
   network: string
 }
 
+export interface FttxTargetResult {
+  subscriber_id: string
+  subscriber_name: string
+  ip_address: string | null
+  circuit_id: string | null
+}
+
 export class SubscriberRepository {
   async findByPhone(phone: string): Promise<SubscriberLookupResult[]> {
     try {
@@ -220,6 +227,39 @@ export class SubscriberRepository {
       return queryResults.flat() as unknown as SubscriberNetworkResult[]
     } catch (error) {
       console.error('Database error in findNetworksBySubscriberIds:', error)
+      throw error
+    }
+  }
+
+  async findFttxTargets(operatorId: string, branches: string[]) {
+    if (branches.length === 0) return []
+
+    try {
+      const results = await sql`
+        SELECT DISTINCT
+            cs.CustServId AS subscriber_id,
+            cs.CustAccName AS subscriber_name,
+            SUBSTRING_INDEX(TRIM(cst.Network), '/', 1) AS ip_address,
+            cstc.value AS circuit_id
+        FROM CustomerServiceTechnical cst
+        LEFT JOIN CustomerServices cs ON cs.CustServId = cst.CustServId
+        LEFT JOIN CustomerServiceTechnicalLink cstl ON cstl.custServId = cst.CustServId
+        LEFT JOIN noc_fiber nf ON nf.id = cstl.foVendorId
+        LEFT JOIN fiber_vendor fv ON fv.id = nf.vendorId
+        LEFT JOIN Customer c ON c.CustId = cs.CustId
+        LEFT JOIN CustomerServiceTechnicalCustom cstc
+            ON cstc.technicalTypeId = cstl.id
+            AND cstc.technicalType = 'link'
+            AND cstc.attribute = 'Vendor CID'
+        WHERE
+            fv.id = ${operatorId}
+            AND cs.CustStatus IN ('AC', 'FR')
+            AND cst.Network LIKE '%/32'
+            AND FIND_IN_SET(COALESCE(c.DisplayBranchId, c.BranchId), ${branches.join(',')}) > 0
+      `
+      return results as unknown as FttxTargetResult[]
+    } catch (error) {
+      console.error('Database error in findFttxTargets:', error)
       throw error
     }
   }

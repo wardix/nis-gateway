@@ -42,4 +42,8 @@ export class SubscriberService {
       subscriberIds,
     )
   }
+
+  async getFttxTargets(operatorId: string, branches: string[]) {
+    return await this.subscriberRepository.findFttxTargets(operatorId, branches)
+  }
 }
