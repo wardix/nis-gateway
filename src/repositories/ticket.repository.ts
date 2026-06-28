@@ -11,6 +11,35 @@ export interface IforteTicketResult {
   ticket_subject: string | null
 }
 
+export interface MonitoringTargetResult {
+  ticket_id: string
+  subscriber_id: string
+  subscriber_name: string
+  ip_address: string | null
+}
+
+export interface UnassignedTicketResult {
+  ticket_id: string
+  subscriber_id: string
+  subscriber_name: string
+  type_id: number
+  issue: string | null
+  region_id: string | null
+}
+
+export interface VendorTicketResult {
+  insert_time: string
+  insert_timestamp: number
+  subscriber_id: string | null
+  subscriber_name: string | null
+  request_number: string | null
+  ticket_number: string | null
+  category: string | null
+  status: string | null
+  ticket_id: string
+  circuit_id: string | null
+}
+
 export class TicketRepository {
   async findActiveIforteTickets(): Promise<IforteTicketResult[]> {
     try {
@@ -44,6 +73,97 @@ export class TicketRepository {
       return results as unknown as IforteTicketResult[]
     } catch (error) {
       console.error('Database error in findActiveIforteTickets:', error)
+      throw error
+    }
+  }
+
+  async findMonitoringTargets(
+    branches: string[],
+    typeId: number,
+  ): Promise<MonitoringTargetResult[]> {
+    if (branches.length === 0) return []
+
+    try {
+      const results = await sql`
+        SELECT
+            t.TtsId AS ticket_id,
+            t.CustServId AS subscriber_id,
+            cs.CustAccName AS subscriber_name,
+            SUBSTRING_INDEX(TRIM(cst.Network), '/', 1) AS ip_address
+        FROM Tts t
+        LEFT JOIN Customer c ON c.CustId = t.CustId
+        LEFT JOIN CustomerServices cs ON cs.CustServId = t.CustServId
+        LEFT JOIN CustomerServiceTechnical cst ON cst.CustServId = t.CustServId
+        WHERE
+            t.Status = 'Open'
+            AND t.TtsTypeId = ${typeId}
+            AND cst.Network LIKE '%/32'
+            AND FIND_IN_SET(COALESCE(c.DisplayBranchId, c.BranchId), ${branches.join(',')}) > 0
+      `
+      return results as unknown as MonitoringTargetResult[]
+    } catch (error) {
+      console.error('Database error in findMonitoringTargets:', error)
+      throw error
+    }
+  }
+
+  async findUnassignedTickets(
+    branch: string,
+  ): Promise<UnassignedTicketResult[]> {
+    try {
+      const results = await sql`
+        SELECT
+            t.TtsId AS ticket_id,
+            t.CustServId AS subscriber_id,
+            cs.CustAccName AS subscriber_name,
+            t.TtsTypeId AS type_id,
+            TRIM(SUBSTRING_INDEX(t.Problem, '\\n', 1)) AS issue,
+            COALESCE(c.DisplayBranchId, c.BranchId) AS region_id
+        FROM Tts t
+        LEFT JOIN CustomerServices cs ON cs.CustServId = t.CustServId
+        LEFT JOIN Customer c ON c.CustId = cs.CustId
+        WHERE
+            c.BranchId = ${branch}
+            AND t.Status = 'Open'
+            AND t.TtsTypeId IN (1, 2)
+            AND t.AssignedNo = 0
+      `
+      return results as unknown as UnassignedTicketResult[]
+    } catch (error) {
+      console.error('Database error in findUnassignedTickets:', error)
+      throw error
+    }
+  }
+
+  async findVendorTickets(vendorId: string): Promise<VendorTicketResult[]> {
+    try {
+      const results = await sql`
+        SELECT
+            fvt.insert_time,
+            UNIX_TIMESTAMP(fvt.insert_time) AS insert_timestamp,
+            cs.CustServId AS subscriber_id,
+            cs.CustAccName AS subscriber_name,
+            fvt.vendor_ticket_number AS request_number,
+            fvt.vendor_escalation_ticket_number AS ticket_number,
+            fvt.vendor_ticket_category AS category,
+            fvt.vendor_ticket_status AS status,
+            fvt.ticket_id,
+            cstc.value AS circuit_id
+        FROM FiberVendorTickets fvt
+        LEFT JOIN Tts t ON t.TtsId = fvt.ticket_id
+        LEFT JOIN CustomerServices cs ON cs.CustServId = t.CustServId
+        LEFT JOIN CustomerServiceTechnicalLink cstl ON cstl.custServId = cs.CustServId
+        LEFT JOIN CustomerServiceTechnicalCustom cstc ON cstc.technicalTypeId = cstl.id
+            AND cstc.technicalType = 'link'
+            AND cstc.attribute = 'Vendor CID'
+        WHERE
+            fvt.fiber_vendor_id = ${vendorId}
+            AND t.Status NOT IN ('Call', 'Pending', 'Cancel', 'Closed')
+            AND cstc.value IS NOT NULL
+      `
+      return results as unknown as VendorTicketResult[]
+    } catch (error) {
+      console.error('Database error in findVendorTickets:', error)
       throw error
     }
   }

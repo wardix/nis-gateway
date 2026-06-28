@@ -30,6 +30,59 @@ const iforteTicketsResponseSchema = z
   })
   .openapi('IforteTicketsResponse')
 
+const monitoringTargetResultSchema = z
+  .object({
+    ticket_id: z.string().openapi({ example: '12345' }),
+    subscriber_id: z.string().openapi({ example: 'S001' }),
+    subscriber_name: z.string().openapi({ example: 'John Doe' }),
+    ip_address: z.string().nullable().openapi({ example: '192.168.1.1' }),
+  })
+  .openapi('MonitoringTargetResult')
+
+const monitoringTargetsResponseSchema = z
+  .object({
+    results: z.array(monitoringTargetResultSchema),
+  })
+  .openapi('MonitoringTargetsResponse')
+
+const unassignedTicketResultSchema = z
+  .object({
+    ticket_id: z.string().openapi({ example: '12345' }),
+    subscriber_id: z.string().openapi({ example: 'S001' }),
+    subscriber_name: z.string().openapi({ example: 'John Doe' }),
+    type_id: z.number().openapi({ example: 1 }),
+    issue: z.string().nullable().openapi({ example: 'LOS' }),
+    region_id: z.string().nullable().openapi({ example: '020' }),
+  })
+  .openapi('UnassignedTicketResult')
+
+const unassignedTicketsResponseSchema = z
+  .object({
+    results: z.array(unassignedTicketResultSchema),
+  })
+  .openapi('UnassignedTicketsResponse')
+
+const vendorTicketResultSchema = z
+  .object({
+    insert_time: z.string().openapi({ example: '2026-06-01 10:00:00' }),
+    insert_timestamp: z.number().openapi({ example: 1717216800 }),
+    subscriber_id: z.string().nullable().openapi({ example: 'S001' }),
+    subscriber_name: z.string().nullable().openapi({ example: 'John Doe' }),
+    request_number: z.string().nullable().openapi({ example: 'REQ-123' }),
+    ticket_number: z.string().nullable().openapi({ example: 'T-456' }),
+    category: z.string().nullable().openapi({ example: 'Network' }),
+    status: z.string().nullable().openapi({ example: 'Open' }),
+    ticket_id: z.string().openapi({ example: '12345' }),
+    circuit_id: z.string().nullable().openapi({ example: 'V-CID-123' }),
+  })
+  .openapi('VendorTicketResult')
+
+const vendorTicketsResponseSchema = z
+  .object({
+    results: z.array(vendorTicketResultSchema),
+  })
+  .openapi('VendorTicketsResponse')
+
 // Routes
 const iforteTicketsRoute = createRoute({
   method: 'get',
@@ -53,6 +106,75 @@ const iforteTicketsRoute = createRoute({
   },
 })
 
+const monitoringTargetsRoute = createRoute({
+  method: 'get',
+  path: '/monitoring',
+  summary: 'Get Monitoring Targets',
+  description: 'Data target IP pelanggan dengan tiket open.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z.object({
+      branch: z.string().optional().openapi({ example: '020,027' }),
+      type_id: z.coerce.number().optional().openapi({ example: 6 }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': { schema: monitoringTargetsResponseSchema },
+      },
+      description: 'Monitoring targets retrieved successfully',
+    },
+    401: { description: 'Unauthorized' },
+  },
+})
+
+const unassignedTicketsRoute = createRoute({
+  method: 'get',
+  path: '/unassigned',
+  summary: 'Get Unassigned Tickets',
+  description: 'Tiket open yang belum ditugaskan ke petugas.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z.object({
+      branch: z.string().optional().openapi({ example: '020' }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': { schema: unassignedTicketsResponseSchema },
+      },
+      description: 'Unassigned tickets retrieved successfully',
+    },
+    401: { description: 'Unauthorized' },
+  },
+})
+
+const vendorTicketsRoute = createRoute({
+  method: 'get',
+  path: '/vendor',
+  summary: 'Get Vendor Tickets',
+  description: 'Vendor/operator ticket dengan detail lengkap.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z.object({
+      vendor_id: z
+        .string()
+        .min(1, { message: 'Vendor ID is required' })
+        .openapi({ example: '22' }),
+    }),
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: vendorTicketsResponseSchema } },
+      description: 'Vendor tickets retrieved successfully',
+    },
+    400: { description: 'Bad Request' },
+    401: { description: 'Unauthorized' },
+  },
+})
+
 // Implementation
 ticketController.openapi(iforteTicketsRoute, async (c) => {
   try {
@@ -60,6 +182,48 @@ ticketController.openapi(iforteTicketsRoute, async (c) => {
     return c.json({ results: data })
   } catch (error) {
     console.error('Iforte tickets retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+ticketController.openapi(monitoringTargetsRoute, async (c) => {
+  const { branch, type_id } = c.req.valid('query')
+  const defaultBranches = ['020', '027']
+  const branches = branch
+    ? branch.split(',').map((b) => b.trim())
+    : defaultBranches
+  const finalTypeId = type_id ?? 6
+
+  try {
+    const data = await ticketService.getMonitoringTargets(branches, finalTypeId)
+    return c.json({ results: data })
+  } catch (error) {
+    console.error('Monitoring targets retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+ticketController.openapi(unassignedTicketsRoute, async (c) => {
+  const { branch } = c.req.valid('query')
+  const finalBranch = branch ?? '020'
+
+  try {
+    const data = await ticketService.getUnassignedTickets(finalBranch)
+    return c.json({ results: data })
+  } catch (error) {
+    console.error('Unassigned tickets retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+ticketController.openapi(vendorTicketsRoute, async (c) => {
+  const { vendor_id } = c.req.valid('query')
+
+  try {
+    const data = await ticketService.getVendorTickets(vendor_id)
+    return c.json({ results: data })
+  } catch (error) {
+    console.error('Vendor tickets retrieval error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })
