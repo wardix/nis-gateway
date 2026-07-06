@@ -25,6 +25,7 @@ export class TicketService {
   async getEmployeeSolvedTicketSummary(
     targetDate?: string,
     excludedEmpIds?: string[],
+    departmentId?: number,
   ) {
     // Default to yesterday if targetDate is not provided
     let finalTargetDate = targetDate
@@ -47,9 +48,12 @@ export class TicketService {
         .filter((id) => id.length > 0)
     }
 
+    const finalDepartmentId = departmentId ?? 34
+
     return await this.ticketRepository.getEmployeeSolvedTicketSummary(
       finalTargetDate,
       finalExcludedEmpIds,
+      finalDepartmentId,
     )
   }
 }

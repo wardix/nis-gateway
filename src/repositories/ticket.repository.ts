@@ -178,12 +178,13 @@ export class TicketRepository {
   async getEmployeeSolvedTicketSummary(
     targetDate: string,
     excludedEmpIds: string[],
+    departmentId: number,
   ): Promise<EmployeeCallTicketSummary[]> {
     try {
       const employeesData = await sql`
         SELECT EmpId, EmpFName, EmpLname 
         FROM Employee 
-        WHERE EmpJoinStatus != 'QUIT' AND DeptId = 34
+        WHERE EmpJoinStatus != 'QUIT' AND DeptId = ${departmentId}
       `
 
       const employeeNamesMap: Record<string, string> = {}

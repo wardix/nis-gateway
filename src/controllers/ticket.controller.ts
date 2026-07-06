@@ -206,6 +206,7 @@ const employeeSummaryRoute = createRoute({
         .string()
         .optional()
         .openapi({ example: '0200911, 0202616' }),
+      department_id: z.coerce.number().optional().openapi({ example: 34 }),
     }),
   },
   responses: {
@@ -273,7 +274,7 @@ ticketController.openapi(vendorTicketsRoute, async (c) => {
 })
 
 ticketController.openapi(employeeSummaryRoute, async (c) => {
-  const { target_date, excluded_emp_ids } = c.req.valid('query')
+  const { target_date, excluded_emp_ids, department_id } = c.req.valid('query')
   const excludedArr = excluded_emp_ids
     ? excluded_emp_ids.split(',').map((id) => id.trim())
     : undefined
@@ -282,6 +283,7 @@ ticketController.openapi(employeeSummaryRoute, async (c) => {
     const data = await ticketService.getEmployeeSolvedTicketSummary(
       target_date,
       excludedArr,
+      department_id,
     )
     return c.json({ results: data })
   } catch (error) {
