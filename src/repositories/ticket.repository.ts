@@ -40,6 +40,13 @@ export interface VendorTicketResult {
   circuit_id: string | null
 }
 
+export interface EmployeeCallTicketSummary {
+  EmpId: string
+  Name: string
+  TotalTickets: number
+  Tickets: number[]
+}
+
 export class TicketRepository {
   async findActiveIforteTickets(): Promise<IforteTicketResult[]> {
     try {
@@ -164,6 +171,72 @@ export class TicketRepository {
       return results as unknown as VendorTicketResult[]
     } catch (error) {
       console.error('Database error in findVendorTickets:', error)
+      throw error
+    }
+  }
+
+  async getEmployeeSolvedTicketSummary(
+    targetDate: string,
+    excludedEmpIds: string[],
+  ): Promise<EmployeeCallTicketSummary[]> {
+    try {
+      const employeesData = await sql`
+        SELECT EmpId, EmpFName, EmpLname 
+        FROM Employee 
+        WHERE EmpJoinStatus != 'QUIT' AND DeptId = 34
+      `
+
+      const employeeNamesMap: Record<string, string> = {}
+      for (const emp of employeesData) {
+        const fullName = `${emp.EmpFName || ''} ${emp.EmpLname || ''}`.trim()
+        employeeNamesMap[emp.EmpId as string] = fullName
+      }
+
+      const combinedData = await sql`
+        SELECT tp.EmpId as employee_id, tu.TtsId as ticket_id 
+        FROM TtsPIC tp 
+        LEFT JOIN TtsUpdate tu ON tu.TtsId = tp.TtsId AND tu.AssignedNo = tp.AssignedNo 
+        LEFT JOIN TtsChange tc ON tc.TtsUpdateId = tu.TtsUpdateId AND tc.field = 'Status' 
+        WHERE DATE(tu.ActionStop) = ${targetDate} 
+          AND tu.Status = 'Call' 
+          AND tu.AssignedNo > 0 
+          AND tc.NewValue = 'Call'
+      `
+
+      const employeeTickets: Record<string, number[]> = {}
+      for (const row of combinedData) {
+        const empId = row.employee_id as string
+        const ticketId = row.ticket_id as number
+
+        if (empId && ticketId) {
+          if (!employeeTickets[empId]) {
+            employeeTickets[empId] = []
+          }
+          if (!employeeTickets[empId].includes(ticketId)) {
+            employeeTickets[empId].push(ticketId)
+          }
+        }
+      }
+
+      const sortedSummary = Object.entries(employeeTickets)
+        .filter(([empId]) => {
+          const isNameFound = employeeNamesMap[empId] !== undefined
+          const isNotExcluded = !excludedEmpIds.includes(empId)
+          return isNameFound && isNotExcluded
+        })
+        .sort(([, ticketsA], [, ticketsB]) => ticketsB.length - ticketsA.length)
+        .map(([empId, tickets]) => {
+          return {
+            EmpId: empId,
+            Name: employeeNamesMap[empId],
+            TotalTickets: tickets.length,
+            Tickets: tickets,
+          }
+        })
+
+      return sortedSummary
+    } catch (error) {
+      console.error('Database error in getEmployeeSolvedTicketSummary:', error)
       throw error
     }
   }
