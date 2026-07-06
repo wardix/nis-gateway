@@ -83,6 +83,23 @@ const vendorTicketsResponseSchema = z
   })
   .openapi('VendorTicketsResponse')
 
+const employeeCallTicketSummaryResultSchema = z
+  .object({
+    employee_id: z.string().openapi({ example: '0201234' }),
+    name: z.string().openapi({ example: 'Budi Santoso' }),
+    total_tickets: z.number().openapi({ example: 5 }),
+    tickets: z
+      .array(z.number())
+      .openapi({ example: [101, 102, 103, 104, 105] }),
+  })
+  .openapi('EmployeeCallTicketSummaryResult')
+
+const employeeCallTicketSummaryResponseSchema = z
+  .object({
+    results: z.array(employeeCallTicketSummaryResultSchema),
+  })
+  .openapi('EmployeeCallTicketSummaryResponse')
+
 // Routes
 const iforteTicketsRoute = createRoute({
   method: 'get',
@@ -175,6 +192,34 @@ const vendorTicketsRoute = createRoute({
   },
 })
 
+const employeeSummaryRoute = createRoute({
+  method: 'get',
+  path: '/employee-summary',
+  summary: 'Get Employee Ticket Summary',
+  description:
+    'Mendapatkan laporan summary jumlah tiket berstatus Call per karyawan aktif.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z.object({
+      target_date: z.string().optional().openapi({ example: '2026-06-25' }),
+      excluded_employee_ids: z
+        .string()
+        .optional()
+        .openapi({ example: '0200911, 0202616' }),
+      department_id: z.coerce.number().optional().openapi({ example: 34 }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': { schema: employeeCallTicketSummaryResponseSchema },
+      },
+      description: 'Employee ticket summary retrieved successfully',
+    },
+    401: { description: 'Unauthorized' },
+  },
+})
+
 // Implementation
 ticketController.openapi(iforteTicketsRoute, async (c) => {
   try {
@@ -224,6 +269,26 @@ ticketController.openapi(vendorTicketsRoute, async (c) => {
     return c.json({ results: data })
   } catch (error) {
     console.error('Vendor tickets retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+ticketController.openapi(employeeSummaryRoute, async (c) => {
+  const { target_date, excluded_employee_ids, department_id } =
+    c.req.valid('query')
+  const excludedArr = excluded_employee_ids
+    ? excluded_employee_ids.split(',').map((id) => id.trim())
+    : undefined
+
+  try {
+    const data = await ticketService.getEmployeeSolvedTicketSummary(
+      target_date,
+      excludedArr,
+      department_id,
+    )
+    return c.json({ results: data })
+  } catch (error) {
+    console.error('Employee ticket summary retrieval error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })
