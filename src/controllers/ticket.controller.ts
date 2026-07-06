@@ -85,7 +85,7 @@ const vendorTicketsResponseSchema = z
 
 const employeeCallTicketSummaryResultSchema = z
   .object({
-    emp_id: z.string().openapi({ example: '0201234' }),
+    employee_id: z.string().openapi({ example: '0201234' }),
     name: z.string().openapi({ example: 'Budi Santoso' }),
     total_tickets: z.number().openapi({ example: 5 }),
     tickets: z

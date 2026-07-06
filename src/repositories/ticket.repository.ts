@@ -41,7 +41,7 @@ export interface VendorTicketResult {
 }
 
 export interface EmployeeCallTicketSummary {
-  emp_id: string
+  employee_id: string
   name: string
   total_tickets: number
   tickets: number[]
@@ -228,7 +228,7 @@ export class TicketRepository {
         .sort(([, ticketsA], [, ticketsB]) => ticketsB.length - ticketsA.length)
         .map(([empId, tickets]) => {
           return {
-            emp_id: empId,
+            employee_id: empId,
             name: employeeNamesMap[empId],
             total_tickets: tickets.length,
             tickets: tickets,
