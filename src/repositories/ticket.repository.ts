@@ -41,10 +41,10 @@ export interface VendorTicketResult {
 }
 
 export interface EmployeeCallTicketSummary {
-  EmpId: string
-  Name: string
-  TotalTickets: number
-  Tickets: number[]
+  emp_id: string
+  name: string
+  total_tickets: number
+  tickets: number[]
 }
 
 export class TicketRepository {
@@ -228,10 +228,10 @@ export class TicketRepository {
         .sort(([, ticketsA], [, ticketsB]) => ticketsB.length - ticketsA.length)
         .map(([empId, tickets]) => {
           return {
-            EmpId: empId,
-            Name: employeeNamesMap[empId],
-            TotalTickets: tickets.length,
-            Tickets: tickets,
+            emp_id: empId,
+            name: employeeNamesMap[empId],
+            total_tickets: tickets.length,
+            tickets: tickets,
           }
         })
 
