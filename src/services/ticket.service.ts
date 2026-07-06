@@ -24,7 +24,7 @@ export class TicketService {
 
   async getEmployeeSolvedTicketSummary(
     targetDate?: string,
-    excludedEmpIds?: string[],
+    excludedEmployeeIds?: string[],
     departmentId?: number,
   ) {
     // Default to yesterday if targetDate is not provided
@@ -38,21 +38,12 @@ export class TicketService {
       finalTargetDate = `${yyyy}-${mm}-${dd}`
     }
 
-    // Default to environment variable if excludedEmpIds is not provided
-    let finalExcludedEmpIds = excludedEmpIds
-    if (!finalExcludedEmpIds) {
-      const excludedEmpIdsStr = process.env.EXCLUDED_EMP_IDS || ''
-      finalExcludedEmpIds = excludedEmpIdsStr
-        .split(',')
-        .map((id) => id.trim())
-        .filter((id) => id.length > 0)
-    }
-
+    const finalExcludedEmployeeIds = excludedEmployeeIds ?? []
     const finalDepartmentId = departmentId ?? 34
 
     return await this.ticketRepository.getEmployeeSolvedTicketSummary(
       finalTargetDate,
-      finalExcludedEmpIds,
+      finalExcludedEmployeeIds,
       finalDepartmentId,
     )
   }

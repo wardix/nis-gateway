@@ -202,7 +202,7 @@ const employeeSummaryRoute = createRoute({
   request: {
     query: z.object({
       target_date: z.string().optional().openapi({ example: '2026-06-25' }),
-      excluded_emp_ids: z
+      excluded_employee_ids: z
         .string()
         .optional()
         .openapi({ example: '0200911, 0202616' }),
@@ -274,9 +274,10 @@ ticketController.openapi(vendorTicketsRoute, async (c) => {
 })
 
 ticketController.openapi(employeeSummaryRoute, async (c) => {
-  const { target_date, excluded_emp_ids, department_id } = c.req.valid('query')
-  const excludedArr = excluded_emp_ids
-    ? excluded_emp_ids.split(',').map((id) => id.trim())
+  const { target_date, excluded_employee_ids, department_id } =
+    c.req.valid('query')
+  const excludedArr = excluded_employee_ids
+    ? excluded_employee_ids.split(',').map((id) => id.trim())
     : undefined
 
   try {

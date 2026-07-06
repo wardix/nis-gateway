@@ -177,7 +177,7 @@ export class TicketRepository {
 
   async getEmployeeSolvedTicketSummary(
     targetDate: string,
-    excludedEmpIds: string[],
+    excludedEmployeeIds: string[],
     departmentId: number,
   ): Promise<EmployeeCallTicketSummary[]> {
     try {
@@ -222,7 +222,7 @@ export class TicketRepository {
       const sortedSummary = Object.entries(employeeTickets)
         .filter(([empId]) => {
           const isNameFound = employeeNamesMap[empId] !== undefined
-          const isNotExcluded = !excludedEmpIds.includes(empId)
+          const isNotExcluded = !excludedEmployeeIds.includes(empId)
           return isNameFound && isNotExcluded
         })
         .sort(([, ticketsA], [, ticketsB]) => ticketsB.length - ticketsA.length)
