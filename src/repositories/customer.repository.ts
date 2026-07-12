@@ -9,9 +9,9 @@ export class CustomerRepository {
         FROM
           Customer
         WHERE
-          (FIND_IN_SET(${email}, CustEmail) > 0) OR
-          (FIND_IN_SET(${email}, CustTechCPEmail) > 0) OR
-          (FIND_IN_SET(${email}, CustBillCPEmail) > 0)
+          (FIND_IN_SET(${email}, REPLACE(CustEmail, ' ', '')) > 0) OR
+          (FIND_IN_SET(${email}, REPLACE(CustTechCPEmail, ' ', '')) > 0) OR
+          (FIND_IN_SET(${email}, REPLACE(CustBillCPEmail, ' ', '')) > 0)
       `
 
       // Map results to return an array of IDs
