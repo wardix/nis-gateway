@@ -220,6 +220,57 @@ const employeeSummaryRoute = createRoute({
   },
 })
 
+const createTicketRequestSchema = z
+  .object({
+    priority: z.number().openapi({ example: 1 }),
+    reported_by: z.string().openapi({ example: 'Customer' }),
+    reported_via: z.string().openapi({ example: 'Phone' }),
+    contact_phone: z.string().openapi({ example: '62812345678' }),
+    contact_name: z.string().openapi({ example: 'John Doe' }),
+    status: z.string().openapi({ example: 'Open' }),
+    problem: z.string().openapi({ example: 'Internet tidak bisa connect' }),
+    employee_id: z.string().openapi({ example: '0201234' }),
+    subscriber_id: z.string().openapi({ example: 'S001' }),
+    customer_id: z.string().openapi({ example: 'C001' }),
+    type: z.number().openapi({ example: 1 }),
+  })
+  .openapi('CreateTicketRequest')
+
+const createTicketResponseSchema = z
+  .object({
+    ticket_id: z.number().openapi({ example: 12345 }),
+  })
+  .openapi('CreateTicketResponse')
+
+const createTicketRoute = createRoute({
+  method: 'post',
+  path: '/',
+  summary: 'Create Ticket',
+  description: 'Membuat tiket gangguan baru beserta data kontak.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: createTicketRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      content: {
+        'application/json': {
+          schema: createTicketResponseSchema,
+        },
+      },
+      description: 'Tiket berhasil dibuat',
+    },
+    400: { description: 'Bad Request - Data tidak valid' },
+    401: { description: 'Unauthorized' },
+  },
+})
+
 // Implementation
 ticketController.openapi(iforteTicketsRoute, async (c) => {
   try {
@@ -289,6 +340,17 @@ ticketController.openapi(employeeSummaryRoute, async (c) => {
     return c.json({ results: data })
   } catch (error) {
     console.error('Employee ticket summary retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+ticketController.openapi(createTicketRoute, async (c) => {
+  try {
+    const input = c.req.valid('json')
+    const result = await ticketService.createTicket(input)
+    return c.json(result, 201)
+  } catch (error) {
+    console.error('Create ticket error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })

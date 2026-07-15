@@ -47,6 +47,24 @@ export interface EmployeeCallTicketSummary {
   tickets: number[]
 }
 
+export interface CreateTicketInput {
+  priority: number
+  reported_by: string
+  reported_via: string
+  contact_phone: string
+  contact_name: string
+  status: string
+  problem: string
+  employee_id: string
+  subscriber_id: string
+  customer_id: string
+  type: number
+}
+
+export interface CreateTicketResult {
+  ticket_id: number
+}
+
 export class TicketRepository {
   async findActiveIforteTickets(): Promise<IforteTicketResult[]> {
     try {
@@ -238,6 +256,50 @@ export class TicketRepository {
       return sortedSummary
     } catch (error) {
       console.error('Database error in getEmployeeSolvedTicketSummary:', error)
+      throw error
+    }
+  }
+
+  async createTicket(input: CreateTicketInput): Promise<CreateTicketResult> {
+    try {
+      const result = await sql.begin(async (tx) => {
+        const [inserted] = await tx`
+          INSERT INTO Tts SET
+            PostedTime = NOW(),
+            Priority = ${input.priority},
+            ReportedBy = ${input.reported_by},
+            ReportedVia = ${input.reported_via},
+            ContactNo = ${input.contact_phone},
+            Status = ${input.status},
+            Problem = ${input.problem},
+            EmpId = ${input.employee_id},
+            CustServId = ${input.subscriber_id},
+            CustId = ${input.customer_id},
+            TtsTypeId = ${input.type}
+        `
+        const ttsId = (inserted as unknown as { insertId: number }).insertId
+
+        await tx`
+          INSERT INTO TtsContact SET
+            TtsId = ${ttsId},
+            ContactName = ${input.contact_name},
+            ContactNo = ${input.contact_phone}
+        `
+
+        await tx`
+          INSERT INTO TtsContactLog SET
+            TtsId = ${ttsId},
+            ContactName = ${input.contact_name},
+            ContactNo = ${input.contact_phone},
+            InsertTime = NOW(),
+            InsertBy = ${input.employee_id}
+        `
+
+        return { ticket_id: ttsId }
+      })
+      return result
+    } catch (error) {
+      console.error('Database error in createTicket:', error)
       throw error
     }
   }
