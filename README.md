@@ -20,23 +20,17 @@ Proyek ini menggunakan **Layered Architecture**:
 - **Repositories:** Berisi query Raw SQL untuk berinteraksi langsung dengan database legacy.
 - **Config:** Pengaturan environment dan inisialisasi koneksi database/cache.
 
-## Fitur Utama
+## Modul
 
-1. **Authentication & Security:** 
-   - **Layer 1:** Endpoint `POST /auth/token` dilindungi oleh **Static Bearer Token** (untuk manajemen akses aplikasi).
-   - **Layer 2:** Endpoint bisnis (`/bandwidth`, `/customer`, `/subscriber`) dilindungi oleh **JWT Bearer Token** yang dihasilkan dari Layer 1.
-2. **Bandwidth:** 
-   - Lookup bandwidth berdasarkan array IP (mendukung batching).
-3. **Customer:**
-   - Pencarian Customer ID berdasarkan email (multi-column search).
-4. **Subscriber:**
-   - Lookup subscriber berdasarkan nomor telepon.
-   - Sinkronisasi batch data grafik (Zabbix).
-   - Data sirkuit FTTX dengan paginasi.
-   - Data homepass FTTX dengan paginasi.
-   - Lookup network/subnet berdasarkan daftar subscriber ID (mendukung batching).
-5. **Ticket:**
-   - Daftar tiket gangguan aktif dari vendor fiber Iforte.
+| Modul | Deskripsi |
+|---|---|
+| **Auth** | Two-layer security: Static Bearer Token → JWT |
+| **Bandwidth** | Lookup informasi bandwidth berdasarkan IP |
+| **Customer** | Pencarian Customer ID berdasarkan email |
+| **Subscriber** | Manajemen data subscriber, sirkuit FTTX, dan network |
+| **Ticket** | Manajemen tiket gangguan dan monitoring |
+
+> Daftar endpoint lengkap tersedia di **Swagger UI** saat aplikasi berjalan (`/ui`).
 
 ## Persiapan & Instalasi
 
