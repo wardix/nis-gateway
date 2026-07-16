@@ -3,6 +3,7 @@ import type {
   CreateTicketResult,
   IforteTicketResult,
   TicketRepository,
+  TicketTypeResult,
 } from '../repositories/ticket.repository'
 
 export class TicketService {
@@ -52,5 +53,9 @@ export class TicketService {
 
   async createTicket(input: CreateTicketInput): Promise<CreateTicketResult> {
     return await this.ticketRepository.createTicket(input)
+  }
+
+  async getTicketTypes(): Promise<TicketTypeResult[]> {
+    return await this.ticketRepository.findTicketTypes()
   }
 }

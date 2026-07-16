@@ -271,6 +271,38 @@ const createTicketRoute = createRoute({
   },
 })
 
+const ticketTypeResultSchema = z
+  .object({
+    type_id: z.number().openapi({ example: 1 }),
+    type_descr: z.string().openapi({ example: 'Gangguan' }),
+  })
+  .openapi('TicketTypeResult')
+
+const ticketTypesResponseSchema = z
+  .object({
+    results: z.array(ticketTypeResultSchema),
+  })
+  .openapi('TicketTypesResponse')
+
+const ticketTypesRoute = createRoute({
+  method: 'get',
+  path: '/types',
+  summary: 'Get Ticket Types',
+  description: 'Mengambil daftar tipe tiket yang aktif.',
+  security: [{ JWTAuth: [] }],
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: ticketTypesResponseSchema,
+        },
+      },
+      description: 'Daftar tipe tiket berhasil diambil',
+    },
+    401: { description: 'Unauthorized' },
+  },
+})
+
 // Implementation
 ticketController.openapi(iforteTicketsRoute, async (c) => {
   try {
@@ -351,6 +383,16 @@ ticketController.openapi(createTicketRoute, async (c) => {
     return c.json(result, 201)
   } catch (error) {
     console.error('Create ticket error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+ticketController.openapi(ticketTypesRoute, async (c) => {
+  try {
+    const data = await ticketService.getTicketTypes()
+    return c.json({ results: data })
+  } catch (error) {
+    console.error('Ticket types retrieval error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })

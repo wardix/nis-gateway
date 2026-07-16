@@ -65,6 +65,11 @@ export interface CreateTicketResult {
   ticket_id: number
 }
 
+export interface TicketTypeResult {
+  type_id: number
+  type_descr: string
+}
+
 export class TicketRepository {
   async findActiveIforteTickets(): Promise<IforteTicketResult[]> {
     try {
@@ -300,6 +305,20 @@ export class TicketRepository {
       return result
     } catch (error) {
       console.error('Database error in createTicket:', error)
+      throw error
+    }
+  }
+
+  async findTicketTypes(): Promise<TicketTypeResult[]> {
+    try {
+      const results = await sql`
+        SELECT TtsTypeId AS type_id, TypeName AS type_descr
+        FROM TtsType
+        WHERE \`show\` = 1
+      `
+      return results as unknown as TicketTypeResult[]
+    } catch (error) {
+      console.error('Database error in findTicketTypes:', error)
       throw error
     }
   }
