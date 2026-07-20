@@ -118,7 +118,7 @@ const subscriberIpLookupResultSchema = z
   .object({
     subscriber_id: z.string().openapi({ example: 'S001' }),
     subscriber_name: z.string().openapi({ example: 'John Doe' }),
-    ip: z.string().openapi({ example: '10.20.30.41/32' }),
+    ip: z.string().openapi({ example: '10.20.30.41' }),
   })
   .openapi('SubscriberIpLookupResult')
 

@@ -289,7 +289,7 @@ export class SubscriberRepository {
             SELECT
               cs.CustServId AS subscriber_id,
               cs.CustAccName AS subscriber_name,
-              cst.Network AS ip
+              SUBSTRING_INDEX(TRIM(cst.Network), '/', 1) AS ip
             FROM
               CustomerServiceTechnical AS cst
             LEFT JOIN
