@@ -1,4 +1,5 @@
 import type {
+  SubscriberIpLookupResult,
   SubscriberLookupResult,
   SubscriberNetworkResult,
   SubscriberRepository,
@@ -45,5 +46,9 @@ export class SubscriberService {
 
   async getFttxTargets(operatorId: string, branches: string[]) {
     return await this.subscriberRepository.findFttxTargets(operatorId, branches)
+  }
+
+  async searchByIps(ips: string[]): Promise<SubscriberIpLookupResult[]> {
+    return await this.subscriberRepository.findByIps(ips)
   }
 }

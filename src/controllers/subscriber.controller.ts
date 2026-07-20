@@ -101,6 +101,33 @@ const subscriberNetworksResponseSchema = z
   })
   .openapi('SubscriberNetworksResponse')
 
+const ipSchema =
+  typeof z.string().ip === 'function'
+    ? z.string().ip()
+    : z.string().regex(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/, {
+        message: 'Invalid IP address',
+      })
+
+const ipLookupRequestSchema = z
+  .object({
+    ips: z.array(ipSchema).openapi({ example: ['10.20.30.41'] }),
+  })
+  .openapi('SubscriberIpLookupRequest')
+
+const subscriberIpLookupResultSchema = z
+  .object({
+    subscriber_id: z.string().openapi({ example: 'S001' }),
+    subscriber_name: z.string().openapi({ example: 'John Doe' }),
+    ip: z.string().openapi({ example: '10.20.30.41/32' }),
+  })
+  .openapi('SubscriberIpLookupResult')
+
+const subscriberIpLookupResponseSchema = z
+  .object({
+    results: z.array(subscriberIpLookupResultSchema),
+  })
+  .openapi('SubscriberIpLookupResponse')
+
 // Routes
 const phoneLookupRoute = createRoute({
   method: 'get',
@@ -113,6 +140,7 @@ const phoneLookupRoute = createRoute({
       phone: z
         .string()
         .regex(/^\+?[0-9]+$/, { message: 'Invalid phone number format' })
+
         .openapi({ example: '62812345678' }),
     }),
   },
@@ -312,6 +340,36 @@ const subscriberNetworksRoute = createRoute({
   },
 })
 
+const ipLookupRoute = createRoute({
+  method: 'post',
+  path: '/ip-search',
+  summary: 'Lookup Subscriber by IPs',
+  description: 'Mencari subscriber berdasarkan daftar IP address.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: ipLookupRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: subscriberIpLookupResponseSchema,
+        },
+      },
+      description: 'Data subscriber ditemukan',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+  },
+})
+
 // Implementation
 subscriberController.openapi(phoneLookupRoute, async (c) => {
   const { phone } = c.req.valid('query')
@@ -388,6 +446,17 @@ subscriberController.openapi(fttxTargetsRoute, async (c) => {
     return c.json({ results: data })
   } catch (error) {
     console.error('FTTX targets retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+subscriberController.openapi(ipLookupRoute, async (c) => {
+  try {
+    const { ips } = c.req.valid('json')
+    const data = await subscriberService.searchByIps(ips)
+    return c.json({ results: data })
+  } catch (error) {
+    console.error('Subscriber IP lookup error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })
