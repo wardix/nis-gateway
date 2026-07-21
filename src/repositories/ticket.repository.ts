@@ -70,6 +70,13 @@ export interface TicketTypeResult {
   type_descr: string
 }
 
+export interface EscalationTicketResult {
+  subscriber_id: string
+  ticket_id: string
+  ticket_status: string
+  problem: string
+}
+
 export class TicketRepository {
   async findActiveIforteTickets(): Promise<IforteTicketResult[]> {
     try {
@@ -319,6 +326,30 @@ export class TicketRepository {
       return results as unknown as TicketTypeResult[]
     } catch (error) {
       console.error('Database error in findTicketTypes:', error)
+      throw error
+    }
+  }
+
+  async findActiveEscalationTickets(): Promise<EscalationTicketResult[]> {
+    try {
+      const results = await sql`
+        SELECT
+          CustServId AS subscriber_id,
+          TtsId AS ticket_id,
+          Status AS ticket_status,
+          REGEXP_REPLACE(
+            TRIM(SUBSTRING_INDEX(TRIM(Problem), '\n', 1)),
+            '^Eskalasi ?:? ?',
+            ''
+          ) AS problem
+        FROM Tts
+        WHERE
+          TtsTypeId = 10
+          AND Status NOT IN ('Closed', 'Cancel', 'Call')
+      `
+      return results as unknown as EscalationTicketResult[]
+    } catch (error) {
+      console.error('Database error in findActiveEscalationTickets:', error)
       throw error
     }
   }

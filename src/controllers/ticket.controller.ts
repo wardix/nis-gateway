@@ -303,6 +303,41 @@ const ticketTypesRoute = createRoute({
   },
 })
 
+const escalationTicketResultSchema = z
+  .object({
+    subscriber_id: z.string().openapi({ example: '18292' }),
+    ticket_id: z.string().openapi({ example: '0000475218' }),
+    ticket_status: z.string().openapi({ example: 'Pending' }),
+    problem: z.string().openapi({ example: 'Radio Backup Link Down' }),
+  })
+  .openapi('EscalationTicketResult')
+
+const escalationTicketsResponseSchema = z
+  .object({
+    results: z.array(escalationTicketResultSchema),
+  })
+  .openapi('EscalationTicketsResponse')
+
+const escalationTicketsRoute = createRoute({
+  method: 'get',
+  path: '/escalations',
+  summary: 'Get Active Escalation Tickets',
+  description:
+    'Mengambil daftar tiket eskalasi yang belum diselesaikan (exclude Closed, Cancel, Call).',
+  security: [{ JWTAuth: [] }],
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: escalationTicketsResponseSchema,
+        },
+      },
+      description: 'Daftar tiket eskalasi aktif berhasil diambil',
+    },
+    401: { description: 'Unauthorized' },
+  },
+})
+
 // Implementation
 ticketController.openapi(iforteTicketsRoute, async (c) => {
   try {
@@ -393,6 +428,16 @@ ticketController.openapi(ticketTypesRoute, async (c) => {
     return c.json({ results: data })
   } catch (error) {
     console.error('Ticket types retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+ticketController.openapi(escalationTicketsRoute, async (c) => {
+  try {
+    const data = await ticketService.getActiveEscalationTickets()
+    return c.json({ results: data })
+  } catch (error) {
+    console.error('Escalation tickets retrieval error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })

@@ -1,6 +1,7 @@
 import type {
   CreateTicketInput,
   CreateTicketResult,
+  EscalationTicketResult,
   IforteTicketResult,
   TicketRepository,
   TicketTypeResult,
@@ -57,5 +58,9 @@ export class TicketService {
 
   async getTicketTypes(): Promise<TicketTypeResult[]> {
     return await this.ticketRepository.findTicketTypes()
+  }
+
+  async getActiveEscalationTickets(): Promise<EscalationTicketResult[]> {
+    return await this.ticketRepository.findActiveEscalationTickets()
   }
 }
