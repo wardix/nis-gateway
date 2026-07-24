@@ -81,7 +81,7 @@ export class TicketRepository {
   async findActiveIforteTickets(): Promise<IforteTicketResult[]> {
     try {
       const results = await sql`
-        SELECT
+        SELECT DISTINCT
           fvt.ticket_id AS ticket_id,
           fvt.insert_time AS insert_time,
           fvt.vendor_ticket_status AS ticket_status,
