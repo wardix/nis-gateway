@@ -12,6 +12,12 @@ const subscriberLookupResultSchema = z
   .object({
     subscriber_id: z.string().openapi({ example: 'S001' }),
     subscriber_name: z.string().openapi({ example: 'John Doe' }),
+    domain: z.string().nullable().openapi({ example: 'example.com' }),
+    service: z.string().nullable().openapi({ example: 'Broadband' }),
+    installation_address: z
+      .string()
+      .nullable()
+      .openapi({ example: 'Jl. Utama No. 1' }),
   })
   .openapi('SubscriberLookupResult')
 

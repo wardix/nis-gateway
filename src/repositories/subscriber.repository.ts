@@ -3,6 +3,9 @@ import { sql } from '../config/db'
 export interface SubscriberLookupResult {
   subscriber_id: string
   subscriber_name: string
+  domain: string | null
+  service: string | null
+  installation_address: string | null
 }
 
 export interface SyncGraphItem {
@@ -51,12 +54,18 @@ export class SubscriberRepository {
       const results = await sql`
         SELECT
           cs.CustServId AS subscriber_id,
-          cs.CustAccName AS subscriber_name
+          cs.CustAccName AS subscriber_name,
+          cs.CustDomain AS domain,
+          s.ServiceType AS service,
+          cs.installation_address
         FROM
           sms_phonebook AS sp
         LEFT JOIN
           CustomerServices cs
         ON sp.CustId = cs.CustId
+        LEFT JOIN
+          Services s
+        ON s.ServiceId = cs.ServiceId
         WHERE
           CONCAT('+', sp.phone) LIKE CONCAT('%+', ${escapedPhone})
           AND NOT (cs.CustStatus IN ('NA'))
