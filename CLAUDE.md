@@ -7,17 +7,20 @@ Project ini menggunakan Bun + Hono dengan arsitektur berlapis (layered architect
 - Run: `bun run dev` (Development with watch mode)
 - Format & Lint: `bun run format` (Biome)
 - Build: Tidak diperlukan (Runtime TS native Bun)
-- Test: `bun test`
+
+> **Catatan:** Testing belum diterapkan pada proyek ini.
 
 ## Project Structure
 - `src/index.ts`: Entry point (Hono app instance)
 - `src/controllers/`: Route handlers menggunakan `@hono/zod-openapi`
-- `src/services/`: Logic bisnis & integrasi (NATS, Valkey)
+- `src/services/`: Logic bisnis & orchestrasi repository
 - `src/repositories/`: Database access menggunakan Raw SQL (`Bun.sql`)
 - `src/config/`: Configuration (Env validation via Zod, DB connection)
 
+> **Catatan:** Variabel lingkungan `NATS_URI` dan `VALKEY_URI` sudah didefinisikan di env.ts untuk kebutuhan integrasi masa depan. Di package.json terdapat dependencies `nats` dan `ioredis`, namun saat ini belum ada implementasi aktif NATS messaging atau Valkey caching.
+
 ## Coding Standards
-- **Linter & Formatter:** Biome (Indent: space, Quote: single, Semi: as-needed)
+- **Linter & Formatter:** Biome (Indent: 2 spaces, Quote: single, Semi: as-needed)
 - **API Documentation:** Wajib menggunakan `@hono/zod-openapi` untuk setiap endpoint baru agar Swagger UI tetap sinkron.
 - **Database:** Gunakan Raw SQL via `Bun.sql`. Jangan gunakan ORM.
 - **Security:**
