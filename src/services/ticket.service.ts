@@ -1,4 +1,6 @@
 import type {
+  CreateFromCommandInput,
+  CreateFromCommandResult,
   CreateTicketInput,
   CreateTicketResult,
   EscalationTicketResult,
@@ -54,6 +56,12 @@ export class TicketService {
 
   async createTicket(input: CreateTicketInput): Promise<CreateTicketResult> {
     return await this.ticketRepository.createTicket(input)
+  }
+
+  async createFromCommand(
+    input: CreateFromCommandInput,
+  ): Promise<CreateFromCommandResult> {
+    return await this.ticketRepository.createFromCommand(input)
   }
 
   async getTicketTypes(): Promise<TicketTypeResult[]> {

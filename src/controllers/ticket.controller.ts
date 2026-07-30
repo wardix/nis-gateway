@@ -100,6 +100,30 @@ const employeeCallTicketSummaryResponseSchema = z
   })
   .openapi('EmployeeCallTicketSummaryResponse')
 
+const createFromCommandRequestSchema = z
+  .object({
+    subscriber_id: z
+      .union([z.string(), z.number()])
+      .openapi({ example: 'S001' }),
+    type_id: z.union([z.string(), z.number()]).openapi({ example: 2 }),
+    status: z.string().openapi({ example: 'Open' }),
+    subject: z.string().openapi({ example: 'Link down di area X' }),
+    comment: z.string().openapi({ example: 'Detail masalah...' }),
+    inbox_id: z.number().openapi({ example: 12345 }),
+    agent_email: z.string().email().openapi({ example: 'agent@example.com' }),
+    channel_id: z.string().openapi({ example: 'C1234567890' }),
+    customer_phone_number: z
+      .string()
+      .openapi({ example: '62812345678' }),
+  })
+  .openapi('CreateFromCommandRequest')
+
+const createFromCommandResponseSchema = z
+  .object({
+    ticket_id: z.number().openapi({ example: 12345 }),
+  })
+  .openapi('CreateFromCommandResponse')
+
 // Routes
 const iforteTicketsRoute = createRoute({
   method: 'get',
@@ -338,6 +362,36 @@ const escalationTicketsRoute = createRoute({
   },
 })
 
+const createFromCommandRoute = createRoute({
+  method: 'post',
+  path: '/from-command',
+  summary: 'Create Ticket from Slash Command',
+  description:
+    'Membuat tiket baru dari data slash command (Slack/Discord).',
+  security: [{ JWTAuth: [] }],
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: createFromCommandRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      content: {
+        'application/json': {
+          schema: createFromCommandResponseSchema,
+        },
+      },
+      description: 'Tiket berhasil dibuat dari command',
+    },
+    400: { description: 'Bad Request - Data tidak valid' },
+    401: { description: 'Unauthorized' },
+  },
+})
+
 // Implementation
 ticketController.openapi(iforteTicketsRoute, async (c) => {
   try {
@@ -438,6 +492,17 @@ ticketController.openapi(escalationTicketsRoute, async (c) => {
     return c.json({ results: data })
   } catch (error) {
     console.error('Escalation tickets retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+ticketController.openapi(createFromCommandRoute, async (c) => {
+  try {
+    const input = c.req.valid('json')
+    const result = await ticketService.createFromCommand(input)
+    return c.json(result, 201)
+  } catch (error) {
+    console.error('Create from command error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })

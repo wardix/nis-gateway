@@ -65,6 +65,22 @@ export interface CreateTicketResult {
   ticket_id: number
 }
 
+export interface CreateFromCommandInput {
+  subscriber_id: string | number
+  type_id: string | number
+  status: string
+  subject: string
+  comment: string
+  inbox_id: number
+  agent_email: string
+  channel_id: string
+  customer_phone_number: string
+}
+
+export interface CreateFromCommandResult {
+  ticket_id: number
+}
+
 export interface TicketTypeResult {
   type_id: number
   type_descr: string
@@ -312,6 +328,79 @@ export class TicketRepository {
       return result
     } catch (error) {
       console.error('Database error in createTicket:', error)
+      throw error
+    }
+  }
+
+  async createFromCommand(
+    input: CreateFromCommandInput,
+  ): Promise<CreateFromCommandResult> {
+    try {
+      const result = await sql.begin(async (tx) => {
+        // Fetch customer name from sms_phonebook
+        const escapedPhone = String(input.customer_phone_number).replace(/[%_]/g, '\\$&')
+        const [phoneBookResults] = await tx`
+          SELECT CustAccName AS name FROM sms_phonebook
+          WHERE CONCAT('+', phone) LIKE CONCAT('%+', ${escapedPhone})
+        `
+        const customerName = (phoneBookResults as any[])[0]?.name || input.agent_email
+
+        // Fetch CustId from CustomerServices
+        const [custServResults] = await tx`
+          SELECT CustId FROM CustomerServices WHERE CustServId = ${input.subscriber_id}
+        `
+        const custId = (custServResults as any)?.CustId || null
+
+        // Fetch EmpId from Employee
+        const [empResults] = await tx`
+          SELECT EmpId FROM Employee WHERE EmpEmail = ${input.agent_email}
+        `
+        const empId = (empResults as any)?.EmpId || null
+
+        const [inserted] = await tx`
+          INSERT INTO Tts SET
+            PostedTime = NOW(),
+            Priority = 'Normal',
+            ReportedBy = ${customerName},
+            ReportedVia = 'WhatsApp',
+            ContactNo = ${input.customer_phone_number},
+            Status = ${input.status},
+            Problem = ${input.subject},
+            EmpId = ${empId},
+            CustServId = ${input.subscriber_id},
+            CustId = ${custId},
+            TtsTypeId = ${input.type_id}
+        `
+
+        const ttsId = (inserted as unknown as { insertId: number }).insertId
+
+        await tx`
+          INSERT INTO TtsContact SET
+            TtsId = ${ttsId},
+            ContactName = ${customerName},
+            ContactNo = ${input.customer_phone_number}
+        `
+
+        // Insert into TtsUpdate table
+        const noteText = `eskalasi dari nusacontact #${input.inbox_id}`
+        await tx`
+          INSERT INTO TtsUpdate SET
+            TtsId = ${ttsId},
+            UpdatedTime = NOW(),
+            ActionStart = NOW(),
+            ActionBegin = NOW(),
+            ActionEnd = NOW(),
+            ActionStop = NOW(),
+            EmpId = ${empId},
+            Note = ${noteText},
+            Status = ${input.status}
+        `
+
+        return { ticket_id: ttsId }
+      })
+      return result
+    } catch (error) {
+      console.error('Database error in createFromCommand:', error)
       throw error
     }
   }
