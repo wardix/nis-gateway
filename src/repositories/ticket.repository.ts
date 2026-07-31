@@ -333,8 +333,9 @@ export class TicketRepository {
   }
 
   async createFromCommand(
-    input: CreateFromCommandInput,
-  ): Promise<CreateFromCommandResult> {
+      input: CreateFromCommandInput,
+    ): Promise<CreateFromCommandResult> {
+      console.debug('createFromCommand called with input:', input);
     try {
       const result = await sql.begin(async (tx) => {
         // Fetch customer name from sms_phonebook
@@ -343,6 +344,7 @@ export class TicketRepository {
           SELECT CustAccName AS name FROM sms_phonebook
           WHERE CONCAT('+', phone) LIKE CONCAT('%+', ${escapedPhone})
         `
+        console.debug('phoneBookResults:', phoneBookResults);
         const customerName = (phoneBookResults as any[])[0]?.name || input.agent_email
 
         // Fetch CustId from CustomerServices
@@ -350,12 +352,14 @@ export class TicketRepository {
           SELECT CustId FROM CustomerServices WHERE CustServId = ${input.subscriber_id}
         `
         const custId = (custServResults as any)?.CustId || null
+        console.debug('custId:', custId);
 
         // Fetch EmpId from Employee
         const [empResults] = await tx`
           SELECT EmpId FROM Employee WHERE EmpEmail = ${input.agent_email}
         `
         const empId = (empResults as any)?.EmpId || null
+        console.debug('empId:', empId);
 
         const [inserted] = await tx`
           INSERT INTO Tts SET
@@ -369,8 +373,9 @@ export class TicketRepository {
             EmpId = ${empId},
             CustServId = ${input.subscriber_id},
             CustId = ${custId},
-            TtsTypeId = ${input.type_id}
+            TtsTypeId = ${Number(input.type_id)}
         `
+        console.debug('Inserted Tts with type_id:', ${Number(input.type_id)});
 
         const ttsId = (inserted as unknown as { insertId: number }).insertId
 
@@ -395,6 +400,7 @@ export class TicketRepository {
             Note = ${noteText},
             Status = ${input.status}
         `
+        console.debug('Inserted TtsUpdate for ticket', ttsId);
 
         return { ticket_id: ttsId }
       })
