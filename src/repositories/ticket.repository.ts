@@ -358,7 +358,11 @@ export class TicketRepository {
         const [empResults] = await tx`
           SELECT EmpId FROM Employee WHERE EmpEmail = ${input.agent_email}
         `
-        const empId = (empResults as any)?.EmpId || null
+        let empId = (empResults as any)?.EmpId ?? null
+        if (!empId) {
+          console.warn('EmpId not found for email', input.agent_email, '- using 0 as fallback');
+          empId = 0;
+        }
         console.debug('empId:', empId);
 
         const [inserted] = await tx`
