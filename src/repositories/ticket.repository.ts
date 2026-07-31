@@ -365,8 +365,9 @@ export class TicketRepository {
         }
         console.debug('empId:', empId);
 
-        const insertResult = await tx`
+        await tx`
           INSERT INTO Tts SET
+            TtsId = NULL,
             PostedTime = NOW(),
             Priority = 'Normal',
             ReportedBy = ${customerName},
@@ -379,10 +380,11 @@ export class TicketRepository {
             CustId = ${custId},
             TtsTypeId = ${Number(input.type_id)}
         `
-        console.debug('insertResult:', insertResult);
-        console.debug('Inserted Tts with type_id:', Number(input.type_id));
+        console.debug('Inserted Tts row');
+        const [{ insertId }] = await tx`SELECT LAST_INSERT_ID() as insertId`
+        const ttsId = insertId
 
-        const ttsId = (insertResult as any).insertId
+        // (removed old logic, replaced above)
 
         await tx`
           INSERT INTO TtsContact SET
