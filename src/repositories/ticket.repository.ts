@@ -375,7 +375,7 @@ export class TicketRepository {
             CustId = ${custId},
             TtsTypeId = ${Number(input.type_id)}
         `
-        console.debug('Inserted Tts with type_id:', ${Number(input.type_id)});
+        console.debug('Inserted Tts with type_id:', Number(input.type_id));
 
         const ttsId = (inserted as unknown as { insertId: number }).insertId
 
@@ -404,7 +404,7 @@ export class TicketRepository {
 
         return { ticket_id: ttsId }
       })
-      return result
+      return result;
     } catch (error) {
       console.error('Database error in createFromCommand:', error)
       throw error
