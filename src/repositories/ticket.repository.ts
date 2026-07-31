@@ -341,7 +341,7 @@ export class TicketRepository {
         // Fetch customer name from sms_phonebook
         const escapedPhone = String(input.customer_phone_number).replace(/[%_]/g, '\\$&')
         const [phoneBookResults] = await tx`
-          SELECT CustAccName AS name FROM sms_phonebook
+          SELECT sp.name AS name FROM sms_phonebook sp
           WHERE CONCAT('+', phone) LIKE CONCAT('%+', ${escapedPhone})
         `
         console.debug('phoneBookResults:', phoneBookResults);
