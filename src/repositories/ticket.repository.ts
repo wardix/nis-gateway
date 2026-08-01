@@ -338,21 +338,22 @@ export class TicketRepository {
       console.debug('createFromCommand called with input:', input);
     try {
       const result = await sql.begin(async (tx) => {
-        // Fetch customer name from sms_phonebook
-        const escapedPhone = String(input.customer_phone_number).replace(/[%_]/g, '\\$&')
-        const [phoneBookResults] = await tx`
-          SELECT sp.name AS name FROM sms_phonebook sp
-          WHERE CONCAT('+', phone) LIKE CONCAT('%+', ${escapedPhone})
-        `
-        console.debug('phoneBookResults:', phoneBookResults);
-        const customerName = (phoneBookResults as any)?.name || input.agent_email
-
         // Fetch CustId from CustomerServices
         const [custServResults] = await tx`
           SELECT CustId FROM CustomerServices WHERE CustServId = ${input.subscriber_id}
         `
         const custId = (custServResults as any)?.CustId || null
         console.debug('custId:', custId);
+
+        // Fetch customer name from sms_phonebook
+        const escapedPhone = String(input.customer_phone_number).replace(/[%_]/g, '\\$&')
+        const [phoneBookResults] = await tx`
+          SELECT sp.name AS name FROM sms_phonebook sp
+          WHERE CONCAT('+', phone) LIKE CONCAT('%+', ${escapedPhone})
+          AND CustId = ${custId}
+        `
+        console.debug('phoneBookResults:', phoneBookResults);
+        const customerName = (phoneBookResults as any)?.name || input.agent_email
 
         // Fetch EmpId from Employee
         const [empResults] = await tx`
