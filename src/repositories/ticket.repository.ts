@@ -345,7 +345,7 @@ export class TicketRepository {
           WHERE CONCAT('+', phone) LIKE CONCAT('%+', ${escapedPhone})
         `
         console.debug('phoneBookResults:', phoneBookResults);
-        const customerName = (phoneBookResults as any[])[0]?.name || input.agent_email
+        const customerName = (phoneBookResults as any)?.name || input.agent_email
 
         // Fetch CustId from CustomerServices
         const [custServResults] = await tx`
@@ -405,7 +405,8 @@ export class TicketRepository {
             ActionStop = NOW(),
             EmpId = ${empId},
             Note = ${noteText},
-            Status = ${input.status}
+            Status = ${input.status},
+            Action = ${input.comment}
         `
         console.debug('Inserted TtsUpdate for ticket', ttsId);
 
