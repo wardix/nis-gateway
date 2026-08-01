@@ -394,7 +394,7 @@ export class TicketRepository {
         `
 
         // Insert into TtsUpdate table
-        const noteText = `eskalasi dari nusacontact #${input.inbox_id}`
+        const noteText = `escalated from /command #${input.inbox_id} by ${input.agent_email}`
         await tx`
           INSERT INTO TtsUpdate SET
             TtsId = ${ttsId},
