@@ -7,6 +7,7 @@ import { env } from './config/env'
 import { authController } from './controllers/auth.controller'
 import { bandwidthController } from './controllers/bandwidth.controller'
 import { customerController } from './controllers/customer.controller'
+import { employeeController } from './controllers/employee.controller'
 import { subscriberController } from './controllers/subscriber.controller'
 import { ticketController } from './controllers/ticket.controller'
 
@@ -32,6 +33,7 @@ app.openAPIRegistry.registerComponent('securitySchemes', 'JWTAuth', {
 // JWT Middleware for business routes
 app.use('/bandwidth/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
 app.use('/customer/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
+app.use('/employee/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
 app.use('/subscriber/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
 app.use('/ticket/*', jwt({ secret: env.JWT_SECRET, alg: 'HS256' }))
 
@@ -48,6 +50,7 @@ app.onError((err, c) => {
 app.route('/auth', authController)
 app.route('/bandwidth', bandwidthController)
 app.route('/customer', customerController)
+app.route('/employee', employeeController)
 app.route('/subscriber', subscriberController)
 app.route('/ticket', ticketController)
 
