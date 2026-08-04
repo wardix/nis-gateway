@@ -17,6 +17,7 @@ export interface FttxCircuitResult {
   subscriber_id: string
   subscriber_name: string
   circuit_id: string
+  subscription_status: string
 }
 
 export interface FttxHomepassResult {
@@ -119,7 +120,8 @@ export class SubscriberRepository {
         : sql`SELECT
             cstl.CustServId AS subscriber_id,
             cs.CustAccName AS subscriber_name,
-            cstc.value AS circuit_id`
+            cstc.value AS circuit_id,
+            cs.CustStatus AS subscription_status`
 
       return sql`
       ${selectClause}

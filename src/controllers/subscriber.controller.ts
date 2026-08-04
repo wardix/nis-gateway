@@ -44,6 +44,7 @@ const fttxCircuitResultSchema = z
     subscriber_id: z.string().openapi({ example: 'S001' }),
     subscriber_name: z.string().openapi({ example: 'John Doe' }),
     circuit_id: z.string().openapi({ example: 'V-CID-123' }),
+    subscription_status: z.string().openapi({ example: 'AC' }),
   })
   .openapi('FttxCircuitResult')
 
