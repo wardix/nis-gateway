@@ -112,9 +112,7 @@ const createFromCommandRequestSchema = z
     inbox_id: z.number().openapi({ example: 12345 }),
     agent_email: z.string().email().openapi({ example: 'agent@example.com' }),
     channel_id: z.string().openapi({ example: 'C1234567890' }),
-    customer_phone_number: z
-      .string()
-      .openapi({ example: '62812345678' }),
+    customer_phone_number: z.string().openapi({ example: '62812345678' }),
   })
   .openapi('CreateFromCommandRequest')
 
@@ -366,8 +364,7 @@ const createFromCommandRoute = createRoute({
   method: 'post',
   path: '/from-command',
   summary: 'Create Ticket from Slash Command',
-  description:
-    'Membuat tiket baru dari data slash command (Slack/Discord).',
+  description: 'Membuat tiket baru dari data slash command (Slack/Discord).',
   security: [{ JWTAuth: [] }],
   request: {
     body: {

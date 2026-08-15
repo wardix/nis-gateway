@@ -324,9 +324,9 @@ export class TicketRepository {
   }
 
   async createFromCommand(
-      input: CreateFromCommandInput,
-    ): Promise<CreateFromCommandResult> {
-      console.debug('createFromCommand called with input:', input);
+    input: CreateFromCommandInput,
+  ): Promise<CreateFromCommandResult> {
+    console.debug('createFromCommand called with input:', input)
     try {
       const result = await sql.begin(async (tx) => {
         // Fetch CustId from CustomerServices
@@ -334,17 +334,21 @@ export class TicketRepository {
           SELECT CustId FROM CustomerServices WHERE CustServId = ${input.subscriber_id}
         `
         const custId = (custServResults as any)?.CustId || null
-        console.debug('custId:', custId);
+        console.debug('custId:', custId)
 
         // Fetch customer name from sms_phonebook
-        const escapedPhone = String(input.customer_phone_number).replace(/[%_]/g, '\\$&')
+        const escapedPhone = String(input.customer_phone_number).replace(
+          /[%_]/g,
+          '\\$&',
+        )
         const [phoneBookResults] = await tx`
           SELECT sp.name AS name FROM sms_phonebook sp
           WHERE CONCAT('+', phone) LIKE CONCAT('%+', ${escapedPhone})
           AND CustId = ${custId}
         `
-        console.debug('phoneBookResults:', phoneBookResults);
-        const customerName = (phoneBookResults as any)?.name || input.agent_email
+        console.debug('phoneBookResults:', phoneBookResults)
+        const customerName =
+          (phoneBookResults as any)?.name || input.agent_email
 
         // Fetch EmpId from Employee
         const [empResults] = await tx`
@@ -352,10 +356,14 @@ export class TicketRepository {
         `
         let empId = (empResults as any)?.EmpId ?? null
         if (!empId) {
-          console.warn('EmpId not found for email', input.agent_email, '- using 0 as fallback');
-          empId = 0;
+          console.warn(
+            'EmpId not found for email',
+            input.agent_email,
+            '- using 0 as fallback',
+          )
+          empId = 0
         }
-        console.debug('empId:', empId);
+        console.debug('empId:', empId)
 
         await tx`
           INSERT INTO Tts SET
@@ -372,7 +380,7 @@ export class TicketRepository {
             CustId = ${custId},
             TtsTypeId = ${Number(input.type_id)}
         `
-        console.debug('Inserted Tts row');
+        console.debug('Inserted Tts row')
         const [{ insertId }] = await tx`SELECT LAST_INSERT_ID() as insertId`
         const ttsId = insertId
 
@@ -400,11 +408,11 @@ export class TicketRepository {
             Status = ${input.status},
             Action = ${input.comment}
         `
-        console.debug('Inserted TtsUpdate for ticket', ttsId);
+        console.debug('Inserted TtsUpdate for ticket', ttsId)
 
         return { ticket_id: ttsId }
       })
-      return result;
+      return result
     } catch (error) {
       console.error('Database error in createFromCommand:', error)
       throw error

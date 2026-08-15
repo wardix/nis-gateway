@@ -51,4 +51,8 @@ export class SubscriberService {
   async searchByIps(ips: string[]): Promise<SubscriberIpLookupResult[]> {
     return await this.subscriberRepository.findByIps(ips)
   }
+
+  async getFttxDetailByIp(ip: string) {
+    return await this.subscriberRepository.findFttxDetailByIp(ip)
+  }
 }

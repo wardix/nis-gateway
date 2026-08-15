@@ -135,6 +135,51 @@ const subscriberIpLookupResponseSchema = z
   })
   .openapi('SubscriberIpLookupResponse')
 
+const fttxDetailByIpResultSchema = z
+  .object({
+    subscriber_id: z.string().openapi({ example: '74100' }),
+    subscriber_name: z.string().openapi({ example: 'PT Contoh Pelanggan' }),
+    ip_address: z.string().openapi({ example: '10.20.30.41' }),
+    operator_id: z.string().nullable().openapi({ example: '22' }),
+    circuit_id: z.string().nullable().openapi({ example: 'V-CID-12345' }),
+    homepass_id: z.string().nullable().openapi({ example: 'HP-JKT-001' }),
+    subscription_status: z.string().openapi({ example: 'AC' }),
+  })
+  .openapi('FttxDetailByIpResult')
+
+const fttxDetailByIpRoute = createRoute({
+  method: 'get',
+  path: '/fttx-by-ip',
+  summary: 'Get FTTX Details by IP',
+  description:
+    'Mendapatkan informasi detail FTTX (operator_id, circuit_id, homepass_id) untuk satu IP address.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z.object({
+      ip: ipSchema.openapi({ example: '10.20.30.41' }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: fttxDetailByIpResultSchema,
+        },
+      },
+      description: 'Detail FTTX berhasil ditemukan',
+    },
+    400: {
+      description: 'Bad Request - Format IP address salah',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+    404: {
+      description: 'Not Found - Detail FTTX tidak ditemukan untuk IP ini',
+    },
+  },
+})
+
 // Routes
 const phoneLookupRoute = createRoute({
   method: 'get',
@@ -464,6 +509,24 @@ subscriberController.openapi(ipLookupRoute, async (c) => {
     return c.json({ results: data })
   } catch (error) {
     console.error('Subscriber IP lookup error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+subscriberController.openapi(fttxDetailByIpRoute, async (c) => {
+  const { ip } = c.req.valid('query')
+
+  try {
+    const data = await subscriberService.getFttxDetailByIp(ip)
+    if (!data) {
+      return c.json(
+        { message: 'Subscriber FTTX details not found for this IP' },
+        404,
+      )
+    }
+    return c.json(data, 200)
+  } catch (error) {
+    console.error('FTTX detail by IP error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })

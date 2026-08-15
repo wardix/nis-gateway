@@ -46,6 +46,16 @@ export interface SubscriberIpLookupResult {
   ip: string
 }
 
+export interface FttxDetailByIpResult {
+  subscriber_id: string
+  subscriber_name: string
+  ip_address: string
+  operator_id: string | null
+  circuit_id: string | null
+  homepass_id: string | null
+  subscription_status: string
+}
+
 export class SubscriberRepository {
   async findByPhone(phone: string): Promise<SubscriberLookupResult[]> {
     try {
@@ -346,6 +356,51 @@ export class SubscriberRepository {
       return queryResults.flat() as unknown as SubscriberIpLookupResult[]
     } catch (error) {
       console.error('Database error in findByIps:', error)
+      throw error
+    }
+  }
+
+  async findFttxDetailByIp(ip: string): Promise<FttxDetailByIpResult | null> {
+    try {
+      const results = await sql`
+        SELECT
+          cs.CustServId AS subscriber_id,
+          cs.CustAccName AS subscriber_name,
+          SUBSTRING_INDEX(TRIM(cst.Network), '/', 1) AS ip_address,
+          fv.id AS operator_id,
+          cstc_cid.value AS circuit_id,
+          cstc_home.value AS homepass_id,
+          cs.CustStatus AS subscription_status
+        FROM CustomerServiceTechnical cst
+        LEFT JOIN CustomerServices cs ON cs.CustServId = cst.CustServId
+        LEFT JOIN CustomerServiceTechnicalLink cstl ON cstl.custServId = cs.CustServId
+        LEFT JOIN noc_fiber nf ON nf.id = cstl.foVendorId
+        LEFT JOIN fiber_vendor fv ON fv.id = nf.vendorId
+        LEFT JOIN CustomerServiceTechnicalCustom cstc_cid 
+          ON cstc_cid.technicalType = 'link'
+          AND cstc_cid.technicalTypeId = cstl.id
+          AND cstc_cid.attribute = 'Vendor CID'
+        LEFT JOIN CustomerServiceTechnicalCustom cstc_home 
+          ON cstc_home.technicalType = 'link'
+          AND cstc_home.technicalTypeId = cstl.id
+          AND cstc_home.attribute = 'Home Id'
+        WHERE
+          (
+            cst.Network = ${ip}
+            OR cst.Network = CONCAT(${ip}, '/32')
+            OR (
+              INSTR(cst.Network, '/') > 0 
+              AND INET_ATON(${ip}) BETWEEN INET_ATON(SUBSTRING_INDEX(cst.Network, '/', 1)) 
+              AND (INET_ATON(SUBSTRING_INDEX(cst.Network, '/', 1)) + POWER(2, 32 - CAST(SUBSTRING_INDEX(cst.Network, '/', -1) AS UNSIGNED)) - 1)
+            )
+          )
+        ORDER BY cs.CustStatus = 'AC' DESC, cstl.id DESC
+        LIMIT 1
+      `
+
+      return (results as unknown as FttxDetailByIpResult[])[0] || null
+    } catch (error) {
+      console.error('Database error in findFttxDetailByIp:', error)
       throw error
     }
   }
