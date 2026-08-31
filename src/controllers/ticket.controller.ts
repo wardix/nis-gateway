@@ -330,6 +330,11 @@ const escalationTicketResultSchema = z
     subscriber_id: z.string().openapi({ example: '18292' }),
     ticket_id: z.string().openapi({ example: '0000475218' }),
     ticket_status: z.string().openapi({ example: 'Pending' }),
+    category: z.string().nullable().openapi({ example: 'Network Issue' }),
+    subcategory: z
+      .string()
+      .nullable()
+      .openapi({ example: 'Radio Backbone Down' }),
     problem: z.string().openapi({ example: 'Radio Backup Link Down' }),
   })
   .openapi('EscalationTicketResult')

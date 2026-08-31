@@ -90,6 +90,8 @@ export interface EscalationTicketResult {
   subscriber_id: string
   ticket_id: string
   ticket_status: string
+  category: string | null
+  subcategory: string | null
   problem: string
 }
 
@@ -437,18 +439,22 @@ export class TicketRepository {
     try {
       const results = await sql`
         SELECT
-          CustServId AS subscriber_id,
-          TtsId AS ticket_id,
-          Status AS ticket_status,
+          t.CustServId AS subscriber_id,
+          t.TtsId AS ticket_id,
+          t.Status AS ticket_status,
+          tcln.Category AS category,
+          tcld.Name AS subcategory,
           REGEXP_REPLACE(
-            TRIM(SUBSTRING_INDEX(TRIM(Problem), '\n', 1)),
+            TRIM(SUBSTRING_INDEX(TRIM(t.Problem), '\n', 1)),
             '^Eskalasi ?:? ?',
             ''
           ) AS problem
-        FROM Tts
+        FROM Tts t
+        LEFT JOIN TtsCategoryListNew tcln ON t.CategoryId = tcln.CategoryId
+        LEFT JOIN TtsCategoryListDetail tcld ON t.CategoryDetailId = tcld.Id
         WHERE
-          TtsTypeId = 10
-          AND Status NOT IN ('Closed', 'Cancel', 'Call')
+          t.TtsTypeId = 10
+          AND t.Status NOT IN ('Closed', 'Cancel', 'Call')
       `
       return results as unknown as EscalationTicketResult[]
     } catch (error) {
