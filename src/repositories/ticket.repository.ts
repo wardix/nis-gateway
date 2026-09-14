@@ -199,11 +199,13 @@ export class TicketRepository {
         LEFT JOIN Tts t ON t.TtsId = fvt.ticket_id
         LEFT JOIN CustomerServices cs ON cs.CustServId = t.CustServId
         LEFT JOIN CustomerServiceTechnicalLink cstl ON cstl.custServId = cs.CustServId
+        LEFT JOIN noc_fiber nf ON nf.id = cstl.foVendorID
         LEFT JOIN CustomerServiceTechnicalCustom cstc ON cstc.technicalTypeId = cstl.id
             AND cstc.technicalType = 'link'
             AND cstc.attribute = 'Vendor CID'
         WHERE
             fvt.fiber_vendor_id = ${vendorId}
+            AND nf.vendorId = ${vendorId}
             AND t.Status NOT IN ('Call', 'Pending', 'Cancel', 'Closed')
             AND cstc.value IS NOT NULL
       `
