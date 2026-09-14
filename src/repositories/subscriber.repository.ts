@@ -56,6 +56,10 @@ export interface FttxDetailByIpResult {
   subscription_status: string
 }
 
+export interface AllocatedNetworkResult {
+  network: string
+}
+
 export class SubscriberRepository {
   async findByPhone(phone: string): Promise<SubscriberLookupResult[]> {
     try {
@@ -401,6 +405,29 @@ export class SubscriberRepository {
       return (results as unknown as FttxDetailByIpResult[])[0] || null
     } catch (error) {
       console.error('Database error in findFttxDetailByIp:', error)
+      throw error
+    }
+  }
+
+  async findAllocatedNetworksByPrefixes(prefixes: string[]): Promise<string[]> {
+    if (prefixes.length === 0) return []
+
+    try {
+      const strings = [
+        'SELECT Network AS network FROM CustomerServiceTechnical WHERE (Network LIKE ',
+        ...Array(prefixes.length - 1).fill(' OR Network LIKE '),
+        ')',
+      ] as unknown as TemplateStringsArray
+      strings.raw = strings
+
+      const results = (await sql(strings, ...prefixes)) as unknown as {
+        network: string | null
+      }[]
+      return results
+        .map((r) => r.network)
+        .filter((n): n is string => typeof n === 'string' && n.length > 0)
+    } catch (error) {
+      console.error('Database error in findAllocatedNetworksByPrefixes:', error)
       throw error
     }
   }

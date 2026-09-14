@@ -422,6 +422,54 @@ const ipLookupRoute = createRoute({
   },
 })
 
+const availableIpResponseSchema = z
+  .object({
+    subnet: z.string().openapi({ example: '10.233.0.0/22' }),
+    available_ip: z.string().openapi({ example: '10.233.0.5' }),
+  })
+  .openapi('AvailableIpResponse')
+
+const availableIpRoute = createRoute({
+  method: 'get',
+  path: '/networks/available-ip',
+  summary: 'Get Available IP in Subnet',
+  description:
+    'Menemukan satu IP address yang belum dialokasikan di dalam subnet tertentu (default: 10.233.0.0/22).',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z.object({
+      subnet: z
+        .string()
+        .regex(
+          /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/(?:[12]?[0-9]|3[0-2])$/,
+          'Format subnet harus berupa notasi CIDR yang valid (contoh: 10.233.0.0/22)',
+        )
+        .optional()
+        .default('10.233.0.0/22')
+        .openapi({ example: '10.233.0.0/22' }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: availableIpResponseSchema,
+        },
+      },
+      description: 'IP yang tersedia berhasil ditemukan',
+    },
+    400: {
+      description: 'Bad Request - Format subnet salah',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+    404: {
+      description: 'Not Found - Tidak ada IP yang tersedia di subnet ini',
+    },
+  },
+})
+
 // Implementation
 subscriberController.openapi(phoneLookupRoute, async (c) => {
   const { phone } = c.req.valid('query')
@@ -527,6 +575,24 @@ subscriberController.openapi(fttxDetailByIpRoute, async (c) => {
     return c.json(data, 200)
   } catch (error) {
     console.error('FTTX detail by IP error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+subscriberController.openapi(availableIpRoute, async (c) => {
+  const { subnet } = c.req.valid('query')
+
+  try {
+    const data = await subscriberService.getAvailableIp(subnet)
+    if (!data) {
+      return c.json(
+        { error: `No available IP address found in subnet ${subnet}` },
+        404,
+      )
+    }
+    return c.json(data, 200)
+  } catch (error) {
+    console.error('Available IP retrieval error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })

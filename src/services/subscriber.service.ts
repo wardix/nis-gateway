@@ -55,4 +55,75 @@ export class SubscriberService {
   async getFttxDetailByIp(ip: string) {
     return await this.subscriberRepository.findFttxDetailByIp(ip)
   }
+
+  async getAvailableIp(
+    subnet = '10.233.0.0/22',
+  ): Promise<{ subnet: string; available_ip: string } | null> {
+    const [baseIp, maskStr] = subnet.split('/')
+    const prefix = maskStr ? Number.parseInt(maskStr, 10) : 32
+    if (!baseIp || Number.isNaN(prefix) || prefix < 16 || prefix > 32) {
+      throw new Error(
+        'Invalid subnet CIDR format or prefix too wide (allowed: /16 to /32)',
+      )
+    }
+
+    const startInt = ipToInt(baseIp)
+    const totalIps = 2 ** (32 - prefix)
+    const endInt = startInt + totalIps - 1
+
+    const startBlock = startInt >>> 8
+    const endBlock = endInt >>> 8
+    const prefixes: string[] = []
+    for (let b = startBlock; b <= endBlock; b++) {
+      prefixes.push(`${(b >>> 16) & 255}.${(b >>> 8) & 255}.${b & 255}.%`)
+    }
+
+    const records =
+      await this.subscriberRepository.findAllocatedNetworksByPrefixes(prefixes)
+
+    const allocated = new Uint8Array(totalIps)
+
+    for (const net of records) {
+      if (!net) continue
+      const [ipPart, netMaskStr] = net.split('/')
+      const netMask = netMaskStr ? Number.parseInt(netMaskStr, 10) : 32
+      const netStart = ipToInt(ipPart)
+      const count = 2 ** (32 - netMask)
+      const netEnd = netStart + count - 1
+
+      const oStart = Math.max(startInt, netStart)
+      const oEnd = Math.min(endInt, netEnd)
+      for (let i = oStart; i <= oEnd; i++) {
+        allocated[i - startInt] = 1
+      }
+    }
+
+    for (let i = 0; i < totalIps; i++) {
+      if (allocated[i] === 0) {
+        return {
+          subnet,
+          available_ip: intToIp(startInt + i),
+        }
+      }
+    }
+
+    return null
+  }
+}
+
+function ipToInt(ip: string): number {
+  return (
+    ip
+      .split('.')
+      .reduce((acc, oct) => (acc << 8) + Number.parseInt(oct, 10), 0) >>> 0
+  )
+}
+
+function intToIp(int: number): string {
+  return [
+    (int >>> 24) & 255,
+    (int >>> 16) & 255,
+    (int >>> 8) & 255,
+    int & 255,
+  ].join('.')
 }
