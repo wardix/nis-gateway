@@ -470,6 +470,70 @@ const availableIpRoute = createRoute({
   },
 })
 
+const allocateNetworkRequestSchema = z
+  .object({
+    subscriber_id: z.string().openapi({ example: '64857' }),
+    subnet: z
+      .string()
+      .regex(
+        /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/(?:[12]?[0-9]|3[0-2])$/,
+        'Format subnet harus berupa notasi CIDR yang valid (contoh: 10.233.0.0/22)',
+      )
+      .optional()
+      .default('10.233.0.0/22')
+      .openapi({ example: '10.233.0.0/22' }),
+    network: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({ example: '10.233.0.5/32' }),
+  })
+  .openapi('AllocateNetworkRequest')
+
+const allocateNetworkResponseSchema = z
+  .object({
+    subscriber_id: z.string().openapi({ example: '64857' }),
+    network: z.string().openapi({ example: '10.233.0.5/32' }),
+  })
+  .openapi('AllocateNetworkResponse')
+
+const allocateNetworkRoute = createRoute({
+  method: 'post',
+  path: '/networks/allocate',
+  summary: 'Allocate Network for Subscriber',
+  description:
+    'Mengalokasikan IP/network baru untuk subscriber. Jika network tidak diisi, otomatis mengambil IP kosong pertama di subnet.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: allocateNetworkRequestSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      content: {
+        'application/json': {
+          schema: allocateNetworkResponseSchema,
+        },
+      },
+      description: 'Alokasi network berhasil dibuat',
+    },
+    400: {
+      description: 'Bad Request - Parameter format salah',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+    404: {
+      description: 'Not Found - Tidak ada IP yang tersedia di subnet',
+    },
+  },
+})
+
 // Implementation
 subscriberController.openapi(phoneLookupRoute, async (c) => {
   const { phone } = c.req.valid('query')
@@ -593,6 +657,28 @@ subscriberController.openapi(availableIpRoute, async (c) => {
     return c.json(data, 200)
   } catch (error) {
     console.error('Available IP retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+subscriberController.openapi(allocateNetworkRoute, async (c) => {
+  const { subscriber_id, subnet, network } = c.req.valid('json')
+
+  try {
+    const data = await subscriberService.allocateNetwork(
+      subscriber_id,
+      subnet,
+      network,
+    )
+    return c.json(data, 201)
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('No available IP address found')
+    ) {
+      return c.json({ error: error.message }, 404)
+    }
+    console.error('Allocate network error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })

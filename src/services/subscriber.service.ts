@@ -1,4 +1,5 @@
 import type {
+  AllocateNetworkResult,
   SubscriberIpLookupResult,
   SubscriberLookupResult,
   SubscriberNetworkResult,
@@ -108,6 +109,29 @@ export class SubscriberService {
     }
 
     return null
+  }
+
+  async allocateNetwork(
+    subscriberId: string,
+    subnet = '10.233.0.0/22',
+    network?: string | null,
+  ): Promise<AllocateNetworkResult> {
+    let targetNetwork = network?.trim() || null
+
+    if (!targetNetwork) {
+      const available = await this.getAvailableIp(subnet)
+      if (!available) {
+        throw new Error(`No available IP address found in subnet ${subnet}`)
+      }
+      targetNetwork = `${available.available_ip}/32`
+    } else if (!targetNetwork.includes('/')) {
+      targetNetwork = `${targetNetwork}/32`
+    }
+
+    return await this.subscriberRepository.allocateNetwork(
+      subscriberId,
+      targetNetwork,
+    )
   }
 }
 

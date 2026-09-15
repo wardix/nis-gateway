@@ -60,6 +60,11 @@ export interface AllocatedNetworkResult {
   network: string
 }
 
+export interface AllocateNetworkResult {
+  subscriber_id: string
+  network: string
+}
+
 export class SubscriberRepository {
   async findByPhone(phone: string): Promise<SubscriberLookupResult[]> {
     try {
@@ -428,6 +433,25 @@ export class SubscriberRepository {
         .filter((n): n is string => typeof n === 'string' && n.length > 0)
     } catch (error) {
       console.error('Database error in findAllocatedNetworksByPrefixes:', error)
+      throw error
+    }
+  }
+
+  async allocateNetwork(
+    subscriberId: string,
+    network: string,
+  ): Promise<AllocateNetworkResult> {
+    try {
+      await sql`
+        INSERT INTO CustomerServiceTechnical (CustServId, Network)
+        VALUES (${subscriberId}, ${network})
+      `
+      return {
+        subscriber_id: subscriberId,
+        network,
+      }
+    } catch (error) {
+      console.error('Database error in allocateNetwork:', error)
       throw error
     }
   }
