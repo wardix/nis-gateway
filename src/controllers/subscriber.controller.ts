@@ -534,6 +534,50 @@ const allocateNetworkRoute = createRoute({
   },
 })
 
+const unallocatedSubscribersResponseSchema = z
+  .object({
+    results: z.array(
+      z.object({
+        subscriber_id: z.string().openapi({ example: '16456' }),
+        subscriber_name: z.string().openapi({ example: 'tjiptarimba' }),
+        service_id: z.string().openapi({ example: 'DFOP60M' }),
+      }),
+    ),
+  })
+  .openapi('UnallocatedSubscribersResponse')
+
+const unallocatedSubscribersRoute = createRoute({
+  method: 'get',
+  path: '/networks/unallocated',
+  summary: 'Get Unallocated Network Subscribers',
+  description:
+    'Mengambil daftar subscriber aktif yang belum memiliki alokasi network/IP di CustomerServiceTechnical.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z.object({
+      branch: z.string().optional().default('020').openapi({ example: '020' }),
+      excluded_services: z.string().optional().openapi({
+        example: 'II,FOP2P,SLHOME',
+        description:
+          'Comma-separated list ServiceId yang ingin dikecualikan (opsional, jika tidak diisi menggunakan default)',
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: unallocatedSubscribersResponseSchema,
+        },
+      },
+      description: 'Daftar subscriber unallocated berhasil diambil',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+  },
+})
+
 // Implementation
 subscriberController.openapi(phoneLookupRoute, async (c) => {
   const { phone } = c.req.valid('query')
@@ -679,6 +723,27 @@ subscriberController.openapi(allocateNetworkRoute, async (c) => {
       return c.json({ error: error.message }, 404)
     }
     console.error('Allocate network error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+subscriberController.openapi(unallocatedSubscribersRoute, async (c) => {
+  const { branch, excluded_services } = c.req.valid('query')
+  const excludedArr = excluded_services
+    ? excluded_services
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : undefined
+
+  try {
+    const data = await subscriberService.getUnallocatedSubscribers(
+      branch,
+      excludedArr,
+    )
+    return c.json({ results: data }, 200)
+  } catch (error) {
+    console.error('Unallocated subscribers retrieval error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })

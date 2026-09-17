@@ -1,3 +1,4 @@
+import { env } from '../config/env'
 import type {
   AllocateNetworkResult,
   SubscriberIpLookupResult,
@@ -5,7 +6,38 @@ import type {
   SubscriberNetworkResult,
   SubscriberRepository,
   SyncGraphItem,
+  UnallocatedSubscriberResult,
 } from '../repositories/subscriber.repository'
+
+export const DEFAULT_UNALLOCATED_EXCLUDED_SERVICES =
+  env.EXCLUDED_NETWORK_SERVICES
+    ? env.EXCLUDED_NETWORK_SERVICES.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [
+        'II',
+        'FOP2P',
+        'SLPNM',
+        'BLINK',
+        'SLHOME',
+        'VPNCL',
+        'VPNSERVER',
+        'SL40',
+        'SLL500G',
+        'SFL500G',
+        'SLMB',
+        'SLPNMB',
+        'NFSF030',
+        'NFSF001',
+        'BC',
+        'SFL1TB',
+        'SFL2TB',
+        'SLPTPN500',
+        'SLPTPN40',
+        'SLPTPN1TB',
+        'PTP1CORE',
+        'SL2TB',
+      ]
 
 export class SubscriberService {
   constructor(private subscriberRepository: SubscriberRepository) {}
@@ -131,6 +163,21 @@ export class SubscriberService {
     return await this.subscriberRepository.allocateNetwork(
       subscriberId,
       targetNetwork,
+    )
+  }
+
+  async getUnallocatedSubscribers(
+    branch = '020',
+    excludedServices?: string[],
+  ): Promise<UnallocatedSubscriberResult[]> {
+    const finalExcluded =
+      excludedServices && excludedServices.length > 0
+        ? excludedServices
+        : DEFAULT_UNALLOCATED_EXCLUDED_SERVICES
+
+    return await this.subscriberRepository.findUnallocatedSubscribers(
+      branch,
+      finalExcluded,
     )
   }
 }

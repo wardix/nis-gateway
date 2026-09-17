@@ -8,6 +8,11 @@ const envSchema = z.object({
   VALKEY_URI: z.string().default('redis://localhost:6379'),
   NATS_URI: z.string().default('nats://localhost:4222'),
   API_PREFIX: z.string().default('/api'),
+  EXCLUDED_NETWORK_SERVICES: z
+    .string()
+    .default(
+      'II,FOP2P,SLPNM,BLINK,SLHOME,VPNCL,VPNSERVER,SL40,SLL500G,SFL500G,SLMB,SLPNMB,NFSF030,NFSF001,BC,SFL1TB,SFL2TB,SLPTPN500,SLPTPN40,SLPTPN1TB,PTP1CORE,SL2TB',
+    ),
 })
 
 const parsedEnv = envSchema.safeParse(process.env)
