@@ -1,9 +1,11 @@
 import { env } from '../config/env'
 import type {
   AllocateNetworkResult,
+  ProvisioningQueryOptions,
   SubscriberIpLookupResult,
   SubscriberLookupResult,
   SubscriberNetworkResult,
+  SubscriberProvisioningResult,
   SubscriberRepository,
   SyncGraphItem,
   UnallocatedSubscriberResult,
@@ -179,6 +181,12 @@ export class SubscriberService {
       branch,
       finalExcluded,
     )
+  }
+
+  async getProvisioningData(
+    options: ProvisioningQueryOptions,
+  ): Promise<SubscriberProvisioningResult | null> {
+    return await this.subscriberRepository.findProvisioningData(options)
   }
 }
 

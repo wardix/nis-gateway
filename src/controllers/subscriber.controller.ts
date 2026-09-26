@@ -578,6 +578,72 @@ const unallocatedSubscribersRoute = createRoute({
   },
 })
 
+const subscriberProvisioningResponseSchema = z
+  .object({
+    customer_id: z.string().openapi({ example: '0200588044' }),
+    subscriber_id: z.string().openapi({ example: '92368' }),
+    subscriber_name: z.string().openapi({ example: 'dwisekb' }),
+    username: z.string().nullable().openapi({ example: 'dwisekb' }),
+    password: z.string().nullable().openapi({ example: 'nusa8044' }),
+    service_id: z.string().openapi({ example: 'NFSF030' }),
+    ip_address: z.string().nullable().openapi({ example: '10.233.89.107' }),
+    rate_limit: z.string().nullable().openapi({ example: '30720k/30720k' }),
+  })
+  .openapi('SubscriberProvisioningResponse')
+
+const subscriberProvisioningRoute = createRoute({
+  method: 'get',
+  path: '/provisioning',
+  summary: 'Get Subscriber Provisioning Data',
+  description:
+    'Mengambil data kredensial ONT/PPPoE, IP address, dan rate limit bandwidth subscriber untuk sinkronisasi RADIUS dan BRAS berdasarkan subscriber_id, username, atau subscriber_name.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z
+      .object({
+        subscriber_id: z
+          .string()
+          .optional()
+          .openapi({ example: '92368', description: 'ID layanan subscriber' }),
+        username: z
+          .string()
+          .optional()
+          .openapi({ example: 'dwisekb', description: 'Username ONT / PPPoE' }),
+        subscriber_name: z
+          .string()
+          .optional()
+          .openapi({ example: 'dwisekb', description: 'Nama akun subscriber' }),
+      })
+      .refine(
+        (data) =>
+          Boolean(data.subscriber_id || data.username || data.subscriber_name),
+        {
+          message:
+            'Setidaknya salah satu parameter harus diisi: subscriber_id, username, atau subscriber_name',
+        },
+      ),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: subscriberProvisioningResponseSchema,
+        },
+      },
+      description: 'Data provisioning subscriber berhasil diambil',
+    },
+    400: {
+      description: 'Bad Request - Parameter tidak valid',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+    404: {
+      description: 'Not Found - Data subscriber tidak ditemukan',
+    },
+  },
+})
+
 // Implementation
 subscriberController.openapi(phoneLookupRoute, async (c) => {
   const { phone } = c.req.valid('query')
@@ -744,6 +810,25 @@ subscriberController.openapi(unallocatedSubscribersRoute, async (c) => {
     return c.json({ results: data }, 200)
   } catch (error) {
     console.error('Unallocated subscribers retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+subscriberController.openapi(subscriberProvisioningRoute, async (c) => {
+  const { subscriber_id, username, subscriber_name } = c.req.valid('query')
+
+  try {
+    const data = await subscriberService.getProvisioningData({
+      subscriber_id,
+      username,
+      subscriber_name,
+    })
+    if (!data) {
+      return c.json({ error: 'Subscriber provisioning data not found' }, 404)
+    }
+    return c.json(data, 200)
+  } catch (error) {
+    console.error('Subscriber provisioning retrieval error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })

@@ -71,6 +71,23 @@ export interface UnallocatedSubscriberResult {
   service_id: string
 }
 
+export interface SubscriberProvisioningResult {
+  customer_id: string
+  subscriber_id: string
+  subscriber_name: string
+  username: string | null
+  password: string | null
+  service_id: string
+  ip_address: string | null
+  rate_limit: string | null
+}
+
+export interface ProvisioningQueryOptions {
+  subscriber_id?: string
+  username?: string
+  subscriber_name?: string
+}
+
 export class SubscriberRepository {
   async findByPhone(phone: string): Promise<SubscriberLookupResult[]> {
     try {
@@ -518,6 +535,47 @@ export class SubscriberRepository {
       return results as unknown as UnallocatedSubscriberResult[]
     } catch (error) {
       console.error('Database error in findUnallocatedSubscribers:', error)
+      throw error
+    }
+  }
+
+  async findProvisioningData(
+    options: ProvisioningQueryOptions,
+  ): Promise<SubscriberProvisioningResult | null> {
+    try {
+      let whereClause = sql`1 = 0`
+      if (options.subscriber_id) {
+        whereClause = sql`cs.CustServId = ${options.subscriber_id}`
+      } else if (options.username) {
+        whereClause = sql`cs.ontUsername = ${options.username}`
+      } else if (options.subscriber_name) {
+        whereClause = sql`cs.CustAccName = ${options.subscriber_name}`
+      }
+
+      const results = await sql`
+        SELECT
+            cs.CustId AS customer_id,
+            CAST(cs.CustServId AS CHAR) AS subscriber_id,
+            cs.CustAccName AS subscriber_name,
+            cs.ontUsername AS username,
+            cs.ontPassword AS password,
+            cs.ServiceId AS service_id,
+            SUBSTRING_INDEX(cst.Network, '/', 1) AS ip_address,
+            CONCAT(ss.NormalUpCeil, 'k/', ss.NormalDownCeil, 'k') AS rate_limit
+        FROM CustomerServices cs
+        LEFT JOIN CustomerServiceTechnical cst
+            ON cs.CustServId = cst.CustServId
+           AND cst.Network LIKE '%/32'
+        LEFT JOIN ServiceShaping ss
+            ON cs.ServiceId = ss.ServiceId
+        WHERE ${whereClause}
+        ORDER BY cs.CustStatus = 'AC' DESC, cs.CustServId DESC
+        LIMIT 1
+      `
+      const rows = results as unknown as SubscriberProvisioningResult[]
+      return rows.length > 0 ? rows[0] : null
+    } catch (error) {
+      console.error('Database error in findProvisioningData:', error)
       throw error
     }
   }
