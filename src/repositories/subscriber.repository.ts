@@ -481,32 +481,12 @@ export class SubscriberRepository {
 
   async findUnallocatedSubscribers(
     branch: string,
-    excludedServices: string[],
+    excludedServices: string[] = [],
+    excludedSubscriberIds: string[] = [],
   ): Promise<UnallocatedSubscriberResult[]> {
     try {
-      if (excludedServices.length === 0) {
-        const results = await sql`
-          SELECT
-              CAST(cs.CustServId AS CHAR) AS subscriber_id,
-              cs.CustAccName AS subscriber_name,
-              cs.ServiceId AS service_id
-          FROM CustomerServices cs
-          JOIN Customer c ON cs.CustId = c.CustId
-          JOIN Services s ON cs.ServiceId = s.ServiceId
-          JOIN ServiceGroup sg ON s.ServiceGroup = sg.ServiceGroup
-          WHERE sg.ServiceGroupTypeId = 1
-            AND cs.CustStatus IN ('AC', 'FR')
-            AND c.BranchId = ${branch}
-            AND NOT EXISTS (
-                SELECT 1
-                FROM CustomerServiceTechnical cst
-                WHERE cst.CustServId = cs.CustServId
-            )
-        `
-        return results as unknown as UnallocatedSubscriberResult[]
-      }
-
-      const strings = [
+      const values: unknown[] = [branch]
+      const strings: string[] = [
         `
         SELECT
             CAST(cs.CustServId AS CHAR) AS subscriber_id,
@@ -524,14 +504,28 @@ export class SubscriberRepository {
               SELECT 1
               FROM CustomerServiceTechnical cst
               WHERE cst.CustServId = cs.CustServId
-          )
-          AND cs.ServiceId NOT IN (`,
-        ...Array(excludedServices.length - 1).fill(', '),
-        ')',
-      ] as unknown as TemplateStringsArray
-      strings.raw = strings
+          )`,
+      ]
 
-      const results = await sql(strings, branch, ...excludedServices)
+      const addInClause = (column: string, items: string[]) => {
+        if (items.length === 0) return
+        strings[strings.length - 1] += ` AND ${column} NOT IN (`
+        for (let i = 0; i < items.length; i++) {
+          if (i > 0) {
+            strings.push(', ')
+          }
+          values.push(items[i])
+        }
+        strings.push(')')
+      }
+
+      addInClause('cs.ServiceId', excludedServices)
+      addInClause('cs.CustServId', excludedSubscriberIds)
+
+      const stringsArray = strings as unknown as TemplateStringsArray
+      stringsArray.raw = stringsArray
+
+      const results = await sql(stringsArray, ...values)
       return results as unknown as UnallocatedSubscriberResult[]
     } catch (error) {
       console.error('Database error in findUnallocatedSubscribers:', error)

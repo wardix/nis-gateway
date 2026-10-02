@@ -561,6 +561,11 @@ const unallocatedSubscribersRoute = createRoute({
         description:
           'Comma-separated list ServiceId yang ingin dikecualikan (opsional, jika tidak diisi menggunakan default)',
       }),
+      excluded_subscriber_ids: z.string().optional().openapi({
+        example: '16456,17890',
+        description:
+          'Comma-separated list CustServId / Subscriber ID yang ingin dikecualikan (opsional, jika tidak diisi menggunakan default)',
+      }),
     }),
   },
   responses: {
@@ -794,9 +799,17 @@ subscriberController.openapi(allocateNetworkRoute, async (c) => {
 })
 
 subscriberController.openapi(unallocatedSubscribersRoute, async (c) => {
-  const { branch, excluded_services } = c.req.valid('query')
+  const { branch, excluded_services, excluded_subscriber_ids } =
+    c.req.valid('query')
   const excludedArr = excluded_services
     ? excluded_services
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : undefined
+
+  const excludedSubsArr = excluded_subscriber_ids
+    ? excluded_subscriber_ids
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)
@@ -806,6 +819,7 @@ subscriberController.openapi(unallocatedSubscribersRoute, async (c) => {
     const data = await subscriberService.getUnallocatedSubscribers(
       branch,
       excludedArr,
+      excludedSubsArr,
     )
     return c.json({ results: data }, 200)
   } catch (error) {

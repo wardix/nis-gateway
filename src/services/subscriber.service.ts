@@ -41,6 +41,13 @@ export const DEFAULT_UNALLOCATED_EXCLUDED_SERVICES =
         'SL2TB',
       ]
 
+export const DEFAULT_UNALLOCATED_EXCLUDED_SUBSCRIBERS =
+  env.EXCLUDED_SUBSCRIBER_IDS
+    ? env.EXCLUDED_SUBSCRIBER_IDS.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : []
+
 export class SubscriberService {
   constructor(private subscriberRepository: SubscriberRepository) {}
 
@@ -171,15 +178,22 @@ export class SubscriberService {
   async getUnallocatedSubscribers(
     branch = '020',
     excludedServices?: string[],
+    excludedSubscriberIds?: string[],
   ): Promise<UnallocatedSubscriberResult[]> {
-    const finalExcluded =
+    const finalExcludedServices =
       excludedServices && excludedServices.length > 0
         ? excludedServices
         : DEFAULT_UNALLOCATED_EXCLUDED_SERVICES
 
+    const finalExcludedSubscribers =
+      excludedSubscriberIds && excludedSubscriberIds.length > 0
+        ? excludedSubscriberIds
+        : DEFAULT_UNALLOCATED_EXCLUDED_SUBSCRIBERS
+
     return await this.subscriberRepository.findUnallocatedSubscribers(
       branch,
-      finalExcluded,
+      finalExcludedServices,
+      finalExcludedSubscribers,
     )
   }
 
