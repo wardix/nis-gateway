@@ -509,7 +509,7 @@ export class SubscriberRepository {
         JOIN Services s ON cs.ServiceId = s.ServiceId
         JOIN ServiceGroup sg ON s.ServiceGroup = sg.ServiceGroup
         WHERE sg.ServiceGroupTypeId = 1
-          AND cs.CustStatus IN ('AC', 'FR')
+          AND cs.CustStatus IN ('AC', 'FR', 'BL')
           AND IFNULL(c.DisplayBranchId, c.BranchId) = `,
         `
           AND NOT EXISTS (
