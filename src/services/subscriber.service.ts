@@ -30,8 +30,6 @@ export const DEFAULT_UNALLOCATED_EXCLUDED_SERVICES =
         'SFL500G',
         'SLMB',
         'SLPNMB',
-        'NFSF030',
-        'NFSF001',
         'BC',
         'SFL1TB',
         'SFL2TB',
