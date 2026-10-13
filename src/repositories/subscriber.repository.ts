@@ -82,6 +82,18 @@ export interface SubscriberProvisioningResult {
   rate_limit: string | null
 }
 
+export interface BulkSubscriberProvisioningResult {
+  customer_id: string
+  subscriber_id: string
+  subscriber_name: string
+  username: string
+  password: string | null
+  service_id: string
+  ip_address: string
+  rate_limit: string | null
+  status: string
+}
+
 export interface ProvisioningQueryOptions {
   subscriber_id?: string
   username?: string
@@ -567,9 +579,63 @@ export class SubscriberRepository {
         LIMIT 1
       `
       const rows = results as unknown as SubscriberProvisioningResult[]
-      return rows.length > 0 ? rows[0] : null
+      return rows[0] ?? null
     } catch (error) {
       console.error('Database error in findProvisioningData:', error)
+      throw error
+    }
+  }
+
+  async findBulkProvisioningData(
+    branch = '020',
+    page = 1,
+    limit = 100,
+  ): Promise<{ results: BulkSubscriberProvisioningResult[]; total: number }> {
+    try {
+      const offset = (page - 1) * limit
+
+      const baseQuery = (isCount: boolean) => {
+        const selectClause = isCount
+          ? sql`SELECT COUNT(*) as total`
+          : sql`SELECT
+              cs.CustId AS customer_id,
+              CAST(cs.CustServId AS CHAR) AS subscriber_id,
+              cs.CustAccName AS subscriber_name,
+              cs.ontUsername AS username,
+              cs.ontPassword AS password,
+              cs.ServiceId AS service_id,
+              SUBSTRING_INDEX(cst.Network, '/', 1) AS ip_address,
+              CONCAT(ss.NormalUpCeil, 'k/', ss.NormalDownCeil, 'k') AS rate_limit,
+              cs.CustStatus AS status`
+
+        return sql`
+          ${selectClause}
+          FROM CustomerServices cs
+          JOIN Customer c
+              ON cs.CustId = c.CustId
+          JOIN CustomerServiceTechnical cst
+              ON cs.CustServId = cst.CustServId
+             AND cst.Network LIKE '%/32'
+          LEFT JOIN ServiceShaping ss
+              ON cs.ServiceId = ss.ServiceId
+          WHERE IFNULL(c.DisplayBranchId, c.BranchId) = ${branch}
+            AND cs.CustStatus IN ('AC', 'FR', 'BL')
+            AND cs.ontUsername IS NOT NULL
+            AND cs.ontUsername <> ''
+        `
+      }
+
+      const [results, totalCount] = await Promise.all([
+        sql`${baseQuery(false)} ORDER BY cs.CustServId DESC LIMIT ${limit} OFFSET ${offset}`,
+        sql`${baseQuery(true)}`,
+      ])
+
+      return {
+        results: results as unknown as BulkSubscriberProvisioningResult[],
+        total: (totalCount[0] as { total: number }).total,
+      }
+    } catch (error) {
+      console.error('Database error in findBulkProvisioningData:', error)
       throw error
     }
   }

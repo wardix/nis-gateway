@@ -1,6 +1,7 @@
 import { env } from '../config/env'
 import type {
   AllocateNetworkResult,
+  BulkSubscriberProvisioningResult,
   ProvisioningQueryOptions,
   SubscriberIpLookupResult,
   SubscriberLookupResult,
@@ -201,6 +202,29 @@ export class SubscriberService {
     options: ProvisioningQueryOptions,
   ): Promise<SubscriberProvisioningResult | null> {
     return await this.subscriberRepository.findProvisioningData(options)
+  }
+
+  async getBulkProvisioningData(
+    branch = '020',
+    page = 1,
+    limit = 100,
+  ): Promise<{
+    results: BulkSubscriberProvisioningResult[]
+    total: number
+    page: number
+    limit: number
+  }> {
+    const data = await this.subscriberRepository.findBulkProvisioningData(
+      branch,
+      page,
+      limit,
+    )
+    return {
+      results: data.results,
+      total: data.total,
+      page,
+      limit,
+    }
   }
 }
 

@@ -582,6 +582,71 @@ const unallocatedSubscribersRoute = createRoute({
     },
   },
 })
+const bulkSubscriberProvisioningResponseSchema = z
+  .object({
+    results: z.array(
+      z.object({
+        customer_id: z.string().openapi({ example: '0200588044' }),
+        subscriber_id: z.string().openapi({ example: '92368' }),
+        subscriber_name: z.string().openapi({ example: 'dwisekb' }),
+        username: z.string().openapi({ example: 'dwisekb' }),
+        password: z.string().nullable().openapi({ example: 'nusa8044' }),
+        service_id: z.string().openapi({ example: 'NFSF030' }),
+        ip_address: z.string().openapi({ example: '10.233.89.107' }),
+        rate_limit: z.string().nullable().openapi({ example: '30720k/30720k' }),
+        status: z.string().openapi({ example: 'AC' }),
+      }),
+    ),
+    total: z.number().openapi({ example: 1 }),
+    page: z.number().openapi({ example: 1 }),
+    limit: z.number().openapi({ example: 100 }),
+  })
+  .openapi('BulkSubscriberProvisioningResponse')
+
+const bulkSubscriberProvisioningRoute = createRoute({
+  method: 'get',
+  path: '/provisioning/list',
+  summary: 'Get Bulk Subscriber Provisioning Data',
+  description:
+    'Mengambil daftar data kredensial ONT/PPPoE, IP address, dan rate limit subscriber aktif/free/isolir per branch untuk sinkronisasi RADIUS dan BRAS secara massal.',
+  security: [{ JWTAuth: [] }],
+  request: {
+    query: z.object({
+      branch: z.string().optional().default('020').openapi({ example: '020' }),
+      page: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .optional()
+        .default(1)
+        .openapi({ example: 1 }),
+      limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(1000)
+        .optional()
+        .default(100)
+        .openapi({ example: 100 }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: bulkSubscriberProvisioningResponseSchema,
+        },
+      },
+      description: 'Daftar data provisioning subscriber berhasil diambil',
+    },
+    400: {
+      description: 'Bad Request - Parameter tidak valid',
+    },
+    401: {
+      description: 'Unauthorized',
+    },
+  },
+})
 
 const subscriberProvisioningResponseSchema = z
   .object({
@@ -824,6 +889,22 @@ subscriberController.openapi(unallocatedSubscribersRoute, async (c) => {
     return c.json({ results: data }, 200)
   } catch (error) {
     console.error('Unallocated subscribers retrieval error:', error)
+    return c.json({ error: 'Internal Server Error' }, 500)
+  }
+})
+
+subscriberController.openapi(bulkSubscriberProvisioningRoute, async (c) => {
+  const { branch, page, limit } = c.req.valid('query')
+
+  try {
+    const data = await subscriberService.getBulkProvisioningData(
+      branch,
+      page,
+      limit,
+    )
+    return c.json(data, 200)
+  } catch (error) {
+    console.error('Bulk subscriber provisioning retrieval error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }
 })
