@@ -22,10 +22,12 @@ export class BandwidthRepository {
     try {
       const queryResults = await Promise.all(
         batches.map((batch) => {
-          const strings: string[] = []
-          const values: string[] = []
+          const networks = batch.map((ip) =>
+            ip.endsWith('/32') ? ip : `${ip}/32`,
+          )
 
-          strings.push(`
+          const strings = [
+            `
             SELECT
               cst.Network AS ip,
               (ss.NormalDownCeil * 1000) AS download_rate,
@@ -42,38 +44,13 @@ export class BandwidthRepository {
               ServiceShaping AS ss ON cs.ServiceId = ss.ServiceId
             WHERE
               NOT (s.ServiceGroup IN ('SLBP', 'MT', 'IP'))
-              AND (
-                (cst.Network = `)
+              AND cst.Network IN (`,
+            ...Array(networks.length - 1).fill(', '),
+            ')',
+          ] as unknown as TemplateStringsArray
+          strings.raw = strings
 
-          for (let i = 0; i < batch.length; i++) {
-            const ip = batch[i]
-
-            values.push(ip)
-
-            strings.push(` OR cst.Network = CONCAT(`)
-            values.push(ip)
-
-            strings.push(
-              `, '/32') OR (INSTR(cst.Network, '/') > 0 AND INET_ATON(`,
-            )
-            values.push(ip)
-
-            if (i === batch.length - 1) {
-              strings.push(
-                `) BETWEEN INET_ATON(SUBSTRING_INDEX(cst.Network, '/', 1)) AND (INET_ATON(SUBSTRING_INDEX(cst.Network, '/', 1)) + POWER(2, 32 - CAST(SUBSTRING_INDEX(cst.Network, '/', -1) AS UNSIGNED)) - 1))))`,
-              )
-            } else {
-              strings.push(
-                `) BETWEEN INET_ATON(SUBSTRING_INDEX(cst.Network, '/', 1)) AND (INET_ATON(SUBSTRING_INDEX(cst.Network, '/', 1)) + POWER(2, 32 - CAST(SUBSTRING_INDEX(cst.Network, '/', -1) AS UNSIGNED)) - 1))) OR (cst.Network = `,
-              )
-            }
-          }
-
-          const stringsArray = strings as unknown as TemplateStringsArray
-          stringsArray.raw = stringsArray
-          console.log('SQL QUERY:', stringsArray.join('?'))
-
-          return sql(stringsArray, ...values)
+          return sql(strings, ...networks)
         }),
       )
 
