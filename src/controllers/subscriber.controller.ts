@@ -31,8 +31,8 @@ const syncGraphsRequestSchema = z
   .object({
     data: z.array(
       z.object({
-        subscriber_id: z.string().openapi({ example: 'S001' }),
-        graph_id: z.string().openapi({ example: 'G100' }),
+        subscriber_id: z.coerce.string().openapi({ example: 'S001' }),
+        graph_id: z.coerce.string().openapi({ example: 'G100' }),
         order_no: z.number().int().optional().openapi({ example: 1 }),
         title: z
           .string()
