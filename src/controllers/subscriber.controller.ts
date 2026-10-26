@@ -33,8 +33,20 @@ const syncGraphsRequestSchema = z
       z.object({
         subscriber_id: z.string().openapi({ example: 'S001' }),
         graph_id: z.string().openapi({ example: 'G100' }),
+        order_no: z.number().int().optional().openapi({ example: 1 }),
+        title: z
+          .string()
+          .optional()
+          .default('Traffic')
+          .openapi({ example: 'Traffic' }),
       }),
     ),
+    order_no: z.number().int().optional().openapi({ example: 1 }),
+    title: z
+      .string()
+      .optional()
+      .default('Traffic')
+      .openapi({ example: 'Traffic' }),
     updated_by: z.string().default('system').openapi({ example: 'admin_nis' }),
   })
   .openapi('SyncGraphsRequest')
@@ -728,8 +740,13 @@ subscriberController.openapi(phoneLookupRoute, async (c) => {
 
 subscriberController.openapi(syncGraphsRoute, async (c) => {
   try {
-    const { data, updated_by } = c.req.valid('json')
-    const count = await subscriberService.syncGraphs(data, updated_by)
+    const { data, updated_by, order_no, title } = c.req.valid('json')
+    const processedData = data.map((item) => ({
+      ...item,
+      order_no: item.order_no ?? order_no,
+      title: item.title ?? title ?? 'Traffic',
+    }))
+    const count = await subscriberService.syncGraphs(processedData, updated_by)
     return c.json({ success: true, count })
   } catch (error) {
     console.error('Subscriber graph sync error:', error)

@@ -11,6 +11,8 @@ export interface SubscriberLookupResult {
 export interface SyncGraphItem {
   subscriber_id: string
   graph_id: string
+  order_no?: number | null
+  title?: string | null
 }
 
 export interface FttxCircuitResult {
@@ -143,9 +145,10 @@ export class SubscriberRepository {
     const subscriberGraphData = data.map((item) => ({
       CustServId: item.subscriber_id,
       GraphId: item.graph_id,
-      OrderNo: 1,
+      Title: item.title ?? 'Traffic',
+      OrderNo: item.order_no ?? 1,
       UpdatedTime: now,
-      updatedBy: updatedBy,
+      UpdatedBy: updatedBy,
     }))
 
     try {
