@@ -14,6 +14,13 @@ const envSchema = z.object({
       'II,FOP2P,SLPNM,BLINK,SLHOME,VPNCL,VPNSERVER,SL40,SLL500G,SFL500G,SLMB,SLPNMB,BC,SFL1TB,SFL2TB,SLPTPN500,SLPTPN40,SLPTPN1TB,PTP1CORE,SL2TB',
     ),
   EXCLUDED_SUBSCRIBER_IDS: z.string().default(''),
+  DEFAULT_SUBNET: z
+    .string()
+    .regex(
+      /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/(?:[12]?[0-9]|3[0-2])$/,
+      'Format DEFAULT_SUBNET harus berupa notasi CIDR yang valid',
+    )
+    .default('10.233.0.0/22'),
 })
 
 const parsedEnv = envSchema.safeParse(process.env)

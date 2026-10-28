@@ -100,6 +100,8 @@ export interface ProvisioningQueryOptions {
   subscriber_id?: string
   username?: string
   subscriber_name?: string
+  auto_allocate?: boolean
+  subnet?: string
 }
 
 export class SubscriberRepository {

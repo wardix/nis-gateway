@@ -1,4 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
+import { env } from '../config/env'
 import { SubscriberRepository } from '../repositories/subscriber.repository'
 import { SubscriberService } from '../services/subscriber.service'
 
@@ -492,8 +493,8 @@ const allocateNetworkRequestSchema = z
         'Format subnet harus berupa notasi CIDR yang valid (contoh: 10.233.0.0/22)',
       )
       .optional()
-      .default('10.233.0.0/22')
-      .openapi({ example: '10.233.0.0/22' }),
+      .default(env.DEFAULT_SUBNET)
+      .openapi({ example: env.DEFAULT_SUBNET }),
     network: z
       .string()
       .nullable()
@@ -695,6 +696,30 @@ const subscriberProvisioningRoute = createRoute({
           .string()
           .optional()
           .openapi({ example: 'dwisekb', description: 'Nama akun subscriber' }),
+        auto_allocate: z
+          .preprocess(
+            (val) => val === true || val === 'true' || val === '1',
+            z.boolean(),
+          )
+          .optional()
+          .default(false)
+          .openapi({
+            example: false,
+            description:
+              'Otomatis alokasikan IP baru jika subscriber belum memiliki IP',
+          }),
+        subnet: z
+          .string()
+          .regex(
+            /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/(?:[12]?[0-9]|3[0-2])$/,
+            'Format subnet harus berupa notasi CIDR yang valid (contoh: 10.233.0.0/22)',
+          )
+          .optional()
+          .openapi({
+            example: env.DEFAULT_SUBNET,
+            description:
+              'Subnet pool untuk alokasi IP otomatis (opsional, default dari env DEFAULT_SUBNET)',
+          }),
       })
       .refine(
         (data) =>
@@ -927,19 +952,28 @@ subscriberController.openapi(bulkSubscriberProvisioningRoute, async (c) => {
 })
 
 subscriberController.openapi(subscriberProvisioningRoute, async (c) => {
-  const { subscriber_id, username, subscriber_name } = c.req.valid('query')
+  const { subscriber_id, username, subscriber_name, auto_allocate, subnet } =
+    c.req.valid('query')
 
   try {
     const data = await subscriberService.getProvisioningData({
       subscriber_id,
       username,
       subscriber_name,
+      auto_allocate,
+      subnet,
     })
     if (!data) {
       return c.json({ error: 'Subscriber provisioning data not found' }, 404)
     }
     return c.json(data, 200)
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith('No available IP address found')
+    ) {
+      return c.json({ error: error.message }, 404)
+    }
     console.error('Subscriber provisioning retrieval error:', error)
     return c.json({ error: 'Internal Server Error' }, 500)
   }

@@ -153,7 +153,7 @@ export class SubscriberService {
 
   async allocateNetwork(
     subscriberId: string,
-    subnet = '10.233.0.0/22',
+    subnet = env.DEFAULT_SUBNET,
     network?: string | null,
   ): Promise<AllocateNetworkResult> {
     let targetNetwork = network?.trim() || null
@@ -199,7 +199,21 @@ export class SubscriberService {
   async getProvisioningData(
     options: ProvisioningQueryOptions,
   ): Promise<SubscriberProvisioningResult | null> {
-    return await this.subscriberRepository.findProvisioningData(options)
+    const data = await this.subscriberRepository.findProvisioningData(options)
+    if (!data) {
+      return null
+    }
+
+    if (options.auto_allocate && !data.ip_address) {
+      const targetSubnet = options.subnet || env.DEFAULT_SUBNET
+      const allocated = await this.allocateNetwork(
+        data.subscriber_id,
+        targetSubnet,
+      )
+      data.ip_address = allocated.network.replace(/\/32$/, '')
+    }
+
+    return data
   }
 
   async getBulkProvisioningData(
