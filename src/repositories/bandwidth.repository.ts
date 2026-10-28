@@ -26,8 +26,8 @@ export class BandwidthRepository {
             ip.endsWith('/32') ? ip : `${ip}/32`,
           )
 
-          const strings = [
-            `
+          const placeholders = networks.map(() => '?').join(', ')
+          const query = `
             SELECT
               cst.Network AS ip,
               (ss.NormalDownCeil * 1000) AS download_rate,
@@ -44,13 +44,10 @@ export class BandwidthRepository {
               ServiceShaping AS ss ON cs.ServiceId = ss.ServiceId
             WHERE
               NOT (s.ServiceGroup IN ('SLBP', 'MT', 'IP'))
-              AND cst.Network IN (`,
-            ...Array(networks.length - 1).fill(', '),
-            ')',
-          ] as unknown as TemplateStringsArray
-          strings.raw = strings
+              AND cst.Network IN (${placeholders})
+          `
 
-          return sql(strings, ...networks)
+          return sql.unsafe(query, networks)
         }),
       )
 

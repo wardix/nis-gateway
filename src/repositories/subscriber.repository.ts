@@ -282,21 +282,18 @@ export class SubscriberRepository {
     try {
       const queryResults = await Promise.all(
         batches.map((batch) => {
-          const strings = [
-            `
+          const placeholders = batch.map(() => '?').join(', ')
+          const query = `
             SELECT
               CustServId AS subscriber_id,
               Network AS network
             FROM
               CustomerServiceTechnical
             WHERE
-              CustServId IN (`,
-            ...Array(batch.length - 1).fill(', '),
-            ')',
-          ] as unknown as TemplateStringsArray
-          strings.raw = strings
+              CustServId IN (${placeholders})
+          `
 
-          return sql(strings, ...batch)
+          return sql.unsafe(query, batch)
         }),
       )
 
@@ -352,10 +349,17 @@ export class SubscriberRepository {
     try {
       const queryResults = await Promise.all(
         batches.map((batch) => {
-          const strings: string[] = []
           const values: string[] = []
+          let whereClause = ''
 
-          strings.push(`
+          for (let i = 0; i < batch.length; i++) {
+            const ip = batch[i]
+            values.push(ip, ip, ip)
+            if (i > 0) whereClause += ' OR '
+            whereClause += `(cst.Network = ? OR cst.Network = CONCAT(?, '/32') OR (INSTR(cst.Network, '/') > 0 AND INET_ATON(?) BETWEEN INET_ATON(SUBSTRING_INDEX(cst.Network, '/', 1)) AND (INET_ATON(SUBSTRING_INDEX(cst.Network, '/', 1)) + POWER(2, 32 - CAST(SUBSTRING_INDEX(cst.Network, '/', -1) AS UNSIGNED)) - 1)))`
+          }
+
+          const query = `
             SELECT
               cs.CustServId AS subscriber_id,
               cs.CustAccName AS subscriber_name,
@@ -368,37 +372,10 @@ export class SubscriberRepository {
               Services AS s ON cs.ServiceId = s.ServiceId
             WHERE
               NOT (s.ServiceGroup IN ('SLBP', 'MT', 'IP'))
-              AND (
-                (cst.Network = `)
+              AND (${whereClause})
+          `
 
-          for (let i = 0; i < batch.length; i++) {
-            const ip = batch[i]
-
-            values.push(ip)
-
-            strings.push(` OR cst.Network = CONCAT(`)
-            values.push(ip)
-
-            strings.push(
-              `, '/32') OR (INSTR(cst.Network, '/') > 0 AND INET_ATON(`,
-            )
-            values.push(ip)
-
-            if (i === batch.length - 1) {
-              strings.push(
-                `) BETWEEN INET_ATON(SUBSTRING_INDEX(cst.Network, '/', 1)) AND (INET_ATON(SUBSTRING_INDEX(cst.Network, '/', 1)) + POWER(2, 32 - CAST(SUBSTRING_INDEX(cst.Network, '/', -1) AS UNSIGNED)) - 1))))`,
-              )
-            } else {
-              strings.push(
-                `) BETWEEN INET_ATON(SUBSTRING_INDEX(cst.Network, '/', 1)) AND (INET_ATON(SUBSTRING_INDEX(cst.Network, '/', 1)) + POWER(2, 32 - CAST(SUBSTRING_INDEX(cst.Network, '/', -1) AS UNSIGNED)) - 1))) OR (cst.Network = `,
-              )
-            }
-          }
-
-          const stringsArray = strings as unknown as TemplateStringsArray
-          stringsArray.raw = stringsArray
-
-          return sql(stringsArray, ...values)
+          return sql.unsafe(query, values)
         }),
       )
 
@@ -458,14 +435,10 @@ export class SubscriberRepository {
     if (prefixes.length === 0) return []
 
     try {
-      const strings = [
-        'SELECT Network AS network FROM CustomerServiceTechnical WHERE (Network LIKE ',
-        ...Array(prefixes.length - 1).fill(' OR Network LIKE '),
-        ')',
-      ] as unknown as TemplateStringsArray
-      strings.raw = strings
+      const placeholders = prefixes.map(() => 'Network LIKE ?').join(' OR ')
+      const query = `SELECT Network AS network FROM CustomerServiceTechnical WHERE (${placeholders})`
 
-      const results = (await sql(strings, ...prefixes)) as unknown as {
+      const results = (await sql.unsafe(query, prefixes)) as unknown as {
         network: string | null
       }[]
       return results
@@ -503,8 +476,7 @@ export class SubscriberRepository {
   ): Promise<UnallocatedSubscriberResult[]> {
     try {
       const values: unknown[] = [branch]
-      const strings: string[] = [
-        `
+      let query = `
         SELECT
             CAST(cs.CustServId AS CHAR) AS subscriber_id,
             cs.CustAccName AS subscriber_name,
@@ -515,34 +487,25 @@ export class SubscriberRepository {
         JOIN ServiceGroup sg ON s.ServiceGroup = sg.ServiceGroup
         WHERE sg.ServiceGroupTypeId = 1
           AND cs.CustStatus IN ('AC', 'FR', 'BL')
-          AND IFNULL(c.DisplayBranchId, c.BranchId) = `,
-        `
+          AND IFNULL(c.DisplayBranchId, c.BranchId) = ?
           AND NOT EXISTS (
               SELECT 1
               FROM CustomerServiceTechnical cst
               WHERE cst.CustServId = cs.CustServId
-          )`,
-      ]
+          )
+      `
 
-      const addInClause = (column: string, items: string[]) => {
-        if (items.length === 0) return
-        strings[strings.length - 1] += ` AND ${column} NOT IN (`
-        for (let i = 0; i < items.length; i++) {
-          if (i > 0) {
-            strings.push(', ')
-          }
-          values.push(items[i])
-        }
-        strings.push(')')
+      if (excludedServices.length > 0) {
+        query += ` AND cs.ServiceId NOT IN (${excludedServices.map(() => '?').join(', ')})`
+        values.push(...excludedServices)
       }
 
-      addInClause('cs.ServiceId', excludedServices)
-      addInClause('cs.CustServId', excludedSubscriberIds)
+      if (excludedSubscriberIds.length > 0) {
+        query += ` AND cs.CustServId NOT IN (${excludedSubscriberIds.map(() => '?').join(', ')})`
+        values.push(...excludedSubscriberIds)
+      }
 
-      const stringsArray = strings as unknown as TemplateStringsArray
-      stringsArray.raw = stringsArray
-
-      const results = await sql(stringsArray, ...values)
+      const results = await sql.unsafe(query, values)
       return results as unknown as UnallocatedSubscriberResult[]
     } catch (error) {
       console.error('Database error in findUnallocatedSubscribers:', error)
