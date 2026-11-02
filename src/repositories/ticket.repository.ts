@@ -1,4 +1,5 @@
 import { sql } from '../config/db'
+import { env } from '../config/env'
 
 export interface IforteTicketResult {
   ticket_id: string
@@ -101,7 +102,7 @@ export class TicketRepository {
       const results = await sql`
         SELECT
           CAST(fvt.ticket_id AS CHAR) AS ticket_id,
-          DATE_FORMAT(MAX(fvt.insert_time), '%Y-%m-%dT%H:%i:%s+07:00') AS insert_time,
+          DATE_FORMAT(MAX(fvt.insert_time), CONCAT('%Y-%m-%dT%H:%i:%s', ${env.DB_TIMEZONE})) AS insert_time,
           fvt.vendor_ticket_status AS ticket_status,
           cs.CustId AS customer_id,
           CAST(cs.CustServId AS CHAR) AS subscriber_id,
@@ -185,8 +186,8 @@ export class TicketRepository {
     try {
       const results = await sql`
         SELECT
-            DATE_FORMAT(fvt.insert_time, '%Y-%m-%dT%H:%i:%s+07:00') AS insert_time,
-            UNIX_TIMESTAMP(fvt.insert_time) AS insert_timestamp,
+            DATE_FORMAT(fvt.insert_time, CONCAT('%Y-%m-%dT%H:%i:%s', ${env.DB_TIMEZONE})) AS insert_time,
+            UNIX_TIMESTAMP(CONVERT_TZ(fvt.insert_time, ${env.DB_TIMEZONE}, '+00:00')) AS insert_timestamp,
             CAST(cs.CustServId AS CHAR) AS subscriber_id,
             cs.CustAccName AS subscriber_name,
             fvt.vendor_ticket_number AS request_number,
@@ -241,8 +242,8 @@ export class TicketRepository {
         FROM TtsPIC tp 
         LEFT JOIN TtsUpdate tu ON tu.TtsId = tp.TtsId AND tu.AssignedNo = tp.AssignedNo 
         LEFT JOIN TtsChange tc ON tc.TtsUpdateId = tu.TtsUpdateId AND tc.field = 'Status' 
-        WHERE tu.ActionStop >= ${startOfDay}
-          AND tu.ActionStop < DATE_ADD(${startOfDay}, INTERVAL 1 DAY)
+        WHERE tu.ActionStop >= CONVERT_TZ(${startOfDay}, ${env.DB_TIMEZONE}, '+00:00')
+          AND tu.ActionStop < DATE_ADD(CONVERT_TZ(${startOfDay}, ${env.DB_TIMEZONE}, '+00:00'), INTERVAL 1 DAY)
           AND tu.Status = 'Call' 
           AND tu.AssignedNo > 0 
           AND tc.NewValue = 'Call'

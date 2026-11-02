@@ -5,6 +5,13 @@ const envSchema = z.object({
   JWT_SECRET: z.string().default('supersecret'),
   STATIC_AUTH_TOKEN: z.string().default('my-static-token-123'),
   DB_URL: z.string().url().default('mysql://user:pass@localhost:3306/db'),
+  DB_TIMEZONE: z
+    .string()
+    .regex(
+      /^[+-]\d{2}:\d{2}$/,
+      'Format DB_TIMEZONE harus berupa offset seperti +07:00',
+    )
+    .default('+07:00'),
   VALKEY_URI: z.string().default('redis://localhost:6379'),
   NATS_URI: z.string().default('nats://localhost:4222'),
   API_PREFIX: z.string().default('/api'),
