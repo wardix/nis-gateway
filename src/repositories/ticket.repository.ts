@@ -100,11 +100,11 @@ export class TicketRepository {
     try {
       const results = await sql`
         SELECT
-          fvt.ticket_id AS ticket_id,
-          DATE_FORMAT(MAX(fvt.insert_time), '%Y-%m-%d %H:%i:%s') AS insert_time,
+          CAST(fvt.ticket_id AS CHAR) AS ticket_id,
+          DATE_FORMAT(MAX(fvt.insert_time), '%Y-%m-%dT%H:%i:%s+07:00') AS insert_time,
           fvt.vendor_ticket_status AS ticket_status,
           cs.CustId AS customer_id,
-          cs.CustServId AS subscriber_id,
+          CAST(cs.CustServId AS CHAR) AS subscriber_id,
           cs.CustStatus AS subscription_status,
           cs.CustAccName AS subscriber_name,
           REGEXP_REPLACE(substring_index(replace(t.Problem, '\r', ''), '\n', 1), '^Eskalasi ?: ?', '') AS ticket_subject
@@ -185,15 +185,15 @@ export class TicketRepository {
     try {
       const results = await sql`
         SELECT
-            DATE_FORMAT(fvt.insert_time, '%Y-%m-%d %H:%i:%s') AS insert_time,
+            DATE_FORMAT(fvt.insert_time, '%Y-%m-%dT%H:%i:%s+07:00') AS insert_time,
             UNIX_TIMESTAMP(fvt.insert_time) AS insert_timestamp,
-            cs.CustServId AS subscriber_id,
+            CAST(cs.CustServId AS CHAR) AS subscriber_id,
             cs.CustAccName AS subscriber_name,
             fvt.vendor_ticket_number AS request_number,
             fvt.vendor_escalation_ticket_number AS ticket_number,
             fvt.vendor_ticket_category AS category,
             fvt.vendor_ticket_status AS status,
-            fvt.ticket_id,
+            CAST(fvt.ticket_id AS CHAR) AS ticket_id,
             cstc.value AS circuit_id
         FROM FiberVendorTickets fvt
         LEFT JOIN Tts t ON t.TtsId = fvt.ticket_id
@@ -208,6 +208,7 @@ export class TicketRepository {
             AND nf.vendorId = ${vendorId}
             AND t.Status NOT IN ('Call', 'Pending', 'Cancel', 'Closed')
             AND cstc.value IS NOT NULL
+        ORDER BY fvt.insert_time DESC
       `
       return results as unknown as VendorTicketResult[]
     } catch (error) {

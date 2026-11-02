@@ -11,7 +11,7 @@ const ticketService = new TicketService(ticketRepository)
 const iforteTicketResultSchema = z
   .object({
     ticket_id: z.string().openapi({ example: '12345' }),
-    insert_time: z.string().openapi({ example: '2026-06-01 10:00:00' }),
+    insert_time: z.string().openapi({ example: '2026-06-01T10:00:00+07:00' }),
     ticket_status: z.string().nullable().openapi({ example: 'Open' }),
     customer_id: z.string().nullable().openapi({ example: 'C001' }),
     subscriber_id: z.string().nullable().openapi({ example: 'S001' }),
@@ -64,7 +64,7 @@ const unassignedTicketsResponseSchema = z
 
 const vendorTicketResultSchema = z
   .object({
-    insert_time: z.string().openapi({ example: '2026-06-01 10:00:00' }),
+    insert_time: z.string().openapi({ example: '2026-06-01T10:00:00+07:00' }),
     insert_timestamp: z.number().openapi({ example: 1717216800 }),
     subscriber_id: z.string().nullable().openapi({ example: 'S001' }),
     subscriber_name: z.string().nullable().openapi({ example: 'John Doe' }),
