@@ -318,7 +318,7 @@ export class TicketRepository {
             TtsId = ${ttsId},
             ContactName = ${input.contact_name},
             ContactNo = ${input.contact_phone},
-            InsertTime = NOW(),
+            InsertTime = CONVERT_TZ(NOW(), '+00:00', ${env.DB_TIMEZONE}),
             InsertBy = ${input.employee_id}
         `
 

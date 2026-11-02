@@ -33,10 +33,13 @@ export class TicketService {
     excludedEmployeeIds?: string[],
     departmentId?: number,
   ) {
-    // Default to yesterday if targetDate is not provided
+    // Default to yesterday (WIB) if targetDate is not provided
     let finalTargetDate = targetDate
     if (!finalTargetDate) {
-      const target = new Date()
+      const nowWib = new Date().toLocaleString('sv-SE', {
+        timeZone: 'Asia/Jakarta',
+      })
+      const target = new Date(nowWib.replace(' ', 'T'))
       target.setDate(target.getDate() - 1)
       const yyyy = target.getFullYear()
       const mm = String(target.getMonth() + 1).padStart(2, '0')
