@@ -142,7 +142,9 @@ export class SubscriberRepository {
   ): Promise<number | null> {
     if (data.length === 0) return 0
 
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ')
+    const now = new Date().toLocaleString('sv-SE', {
+      timeZone: 'Asia/Jakarta',
+    })
 
     const subscriberGraphData = data.map((item) => ({
       CustServId: item.subscriber_id,

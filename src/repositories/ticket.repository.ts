@@ -101,7 +101,7 @@ export class TicketRepository {
       const results = await sql`
         SELECT
           fvt.ticket_id AS ticket_id,
-          MAX(fvt.insert_time) AS insert_time,
+          DATE_FORMAT(MAX(fvt.insert_time), '%Y-%m-%d %H:%i:%s') AS insert_time,
           fvt.vendor_ticket_status AS ticket_status,
           cs.CustId AS customer_id,
           cs.CustServId AS subscriber_id,
@@ -185,7 +185,7 @@ export class TicketRepository {
     try {
       const results = await sql`
         SELECT
-            fvt.insert_time,
+            DATE_FORMAT(fvt.insert_time, '%Y-%m-%d %H:%i:%s') AS insert_time,
             UNIX_TIMESTAMP(fvt.insert_time) AS insert_timestamp,
             cs.CustServId AS subscriber_id,
             cs.CustAccName AS subscriber_name,
@@ -234,12 +234,14 @@ export class TicketRepository {
         employeeNamesMap[emp.EmpId as string] = fullName
       }
 
+      const startOfDay = `${targetDate} 00:00:00`
       const combinedData = await sql`
         SELECT tp.EmpId as employee_id, tu.TtsId as ticket_id 
         FROM TtsPIC tp 
         LEFT JOIN TtsUpdate tu ON tu.TtsId = tp.TtsId AND tu.AssignedNo = tp.AssignedNo 
         LEFT JOIN TtsChange tc ON tc.TtsUpdateId = tu.TtsUpdateId AND tc.field = 'Status' 
-        WHERE DATE(tu.ActionStop) = ${targetDate} 
+        WHERE tu.ActionStop >= ${startOfDay}
+          AND tu.ActionStop < DATE_ADD(${startOfDay}, INTERVAL 1 DAY)
           AND tu.Status = 'Call' 
           AND tu.AssignedNo > 0 
           AND tc.NewValue = 'Call'
