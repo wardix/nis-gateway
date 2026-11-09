@@ -8,6 +8,25 @@ export interface BandwidthInfo {
   subscription_package: string
 }
 
+export interface HeavyUserInput {
+  startDate: string
+  endDate: string
+  branches: string[]
+  maxPricePerGb: number
+  limit: number
+}
+
+export interface HeavyUserResult {
+  subscriber_id: string
+  subscriber_name: string
+  service_id: string
+  status: string
+  branch: string
+  service_charge: number
+  total_gb: number
+  price_each_gb: number
+}
+
 export class BandwidthRepository {
   async findByIps(ips: string[]): Promise<BandwidthInfo[]> {
     if (ips.length === 0) return []
@@ -55,6 +74,56 @@ export class BandwidthRepository {
       return queryResults.flat() as unknown as BandwidthInfo[]
     } catch (error) {
       console.error('Database error in findByIps:', error)
+      throw error
+    }
+  }
+
+  async findHeavyUsers(input: HeavyUserInput): Promise<HeavyUserResult[]> {
+    const { startDate, endDate, branches, maxPricePerGb, limit } = input
+    const branchList =
+      branches.length > 0 ? branches : ['020', '062', '025', '027', '029']
+
+    const branchPlaceholders = branchList.map(() => '?').join(', ')
+    const params = [startDate, endDate, ...branchList, maxPricePerGb, limit]
+
+    const query = `
+      SELECT
+          CAST(cs.CustServId AS CHAR) AS subscriber_id,
+          cs.CustAccName AS subscriber_name,
+          cs.ServiceId AS service_id,
+          cs.CustStatus AS status,
+          IFNULL(c.DisplayBranchId, c.BranchId) AS branch,
+          s.ServiceCharge AS service_charge,
+          ROUND(td.total_bytes / 1024 / 1024 / 1024, 2) AS total_gb,
+          ROUND(s.ServiceCharge / (td.total_bytes / 1024 / 1024 / 1024), 2) AS price_each_gb
+      FROM CustomerServices cs
+          LEFT JOIN Customer c ON c.CustId = cs.CustId
+          LEFT JOIN Services s ON cs.ServiceId = s.ServiceId
+          LEFT JOIN ServiceGroup sg ON sg.ServiceGroup = s.ServiceGroup
+          LEFT JOIN (
+              SELECT
+                  csid,
+                  SUM(total) AS total_bytes
+              FROM traff_data
+              WHERE date BETWEEN ? AND ?
+              GROUP BY csid
+          ) AS td ON td.csid = cs.CustServId
+      WHERE
+          IFNULL(c.DisplayBranchId, c.BranchId) IN (${branchPlaceholders})
+          AND sg.ServiceGroupTypeId = 1
+          AND td.total_bytes IS NOT NULL
+          AND cs.CustStatus NOT IN ('BL', 'FR', 'NA')
+          AND s.ServiceCharge > 0
+      HAVING price_each_gb < ?
+      ORDER BY price_each_gb ASC
+      LIMIT ?
+    `
+
+    try {
+      const results = await sql.unsafe(query, params)
+      return results as unknown as HeavyUserResult[]
+    } catch (error) {
+      console.error('Database error in findHeavyUsers:', error)
       throw error
     }
   }
